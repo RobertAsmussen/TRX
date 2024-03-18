@@ -114,11 +114,16 @@ class VideoDataset(torch.utils.data.Dataset):
         # go through zip and populate splits with frame locations and action groundtruths
         if self.zip:
             dir_list = list(set([x for x in self.zfile.namelist() if '.jpg' not in x]))
+            for entry in dir_list:
+                split_entry = entry.split("/")
+                if len(split_entry) != 3:
+                    print(split_entry)
+                    print(len(split_entry))
 
-            class_folders = list(set([x.split(os.sep)[-3] for x in dir_list if len(x.split(os.sep)) > 2]))
+            class_folders = list(set([x.split("/")[-2] for x in dir_list if len(x.split("/")) == 2]))
             class_folders.sort()
             self.class_folders = class_folders
-            video_folders = list(set([x.split(os.sep)[-2] for x in dir_list if len(x.split(os.sep)) > 3]))
+            video_folders = list(set([x.split("/")[-2] for x in dir_list if len(x.split("/")) > 2]))
             video_folders.sort()
             self.video_folders = video_folders
 
@@ -135,7 +140,7 @@ class VideoDataset(torch.utils.data.Dataset):
             insert_frames = []
             for img_path in img_list:
             
-                class_folder, video_folder, jpg = img_path.split(os.sep)[-3:]
+                class_folder, video_folder, jpg = img_path.split("/")[-3:]
 
                 if video_folder != last_video_folder:
                     if len(insert_frames) >= self.seq_len:
@@ -287,7 +292,6 @@ class VideoDataset(torch.utils.data.Dataset):
 
     """returns dict of support and target images and labels"""
     def __getitem__(self, index):
-
         #select classes to use for this task
         c = self.get_train_or_test_db()
         classes = c.get_unique_classes()

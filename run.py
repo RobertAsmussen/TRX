@@ -34,6 +34,7 @@ class Learner:
         
         gpu_device = 'cuda'
         self.device = torch.device(gpu_device if torch.cuda.is_available() else 'cpu')
+        print(torch.cuda.get_device_name(self.device))
         self.model = self.init_model()
         self.train_set, self.validation_set, self.test_set = self.init_data()
 
@@ -108,12 +109,12 @@ class Learner:
         args = parser.parse_args()
         
         if args.scratch == "bc":
-            args.scratch = "/mnt/storage/home/tp8961/scratch"
+            args.scratch = ""
         elif args.scratch == "bp":
             args.num_gpus = 4
             # this is low becuase of RAM constraints for the data loader
             args.num_workers = 3
-            args.scratch = "/work/tp8961"
+            args.scratch = "\\work\\tp8961"
         
         if args.checkpoint_dir == None:
             print("need to specify a checkpoint dir")
@@ -127,17 +128,17 @@ class Learner:
             args.trans_linear_in_dim = 512
         
         if args.dataset == "ssv2":
-            args.traintestlist = os.path.join(args.scratch, "video_datasets/splits/somethingsomethingv2TrainTestlist")
-            args.path = os.path.join(args.scratch, "video_datasets/data/somethingsomethingv2_256x256q5_7l8.zip")
+            args.traintestlist = os.path.join(args.scratch, "video_datasets\\splits\\somethingsomethingv2TrainTestlist")
+            args.path = os.path.join(args.scratch, "video_datasets\\data\\somethingsomethingv2_256x256q5_7l8.zip")
         elif args.dataset == "kinetics":
-            args.traintestlist = os.path.join(args.scratch, "video_datasets/splits/kineticsTrainTestlist")
+            args.traintestlist = os.path.join(args.scratch, "video_datasets\\splits\\kineticsTrainTestlist")
             args.path = os.path.join(args.scratch, "video_datasets/data/kinetics_256q5_1.zip")
         elif args.dataset == "ucf":
-            args.traintestlist = os.path.join(args.scratch, "video_datasets/splits/ucfTrainTestlist")
-            args.path = os.path.join(args.scratch, "video_datasets/data/UCF-101_320.zip")
+            args.traintestlist = os.path.join(args.scratch, "video_datasets\\splits\\ucfTrainTestlist")
+            args.path = os.path.join(args.scratch, "video_datasets\\data\\UCF-101_320.zip")
         elif args.dataset == "hmdb":
-            args.traintestlist = os.path.join(args.scratch, "video_datasets/splits/hmdb51TrainTestlist")
-            args.path = os.path.join(args.scratch, "video_datasets/data/hmdb51_256q5.zip")
+            args.traintestlist = os.path.join(args.scratch, "video_datasets\\splits\\hmdb51TrainTestlist")
+            args.path = os.path.join(args.scratch, "video_datasets\\data\\hmdb51_256q5.zip")
 
         return args
 
@@ -148,7 +149,6 @@ class Learner:
                 train_accuracies = []
                 losses = []
                 total_iterations = self.args.training_iterations
-
                 iteration = self.start_iteration
                 for task_dict in self.video_loader:
                     if iteration >= total_iterations:
