@@ -1,0 +1,29 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Debug",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}\\run.py",
+      "args": [
+        "-c=checkpoint",
+        "--query_per_class=5",
+        "--shot=5",
+        "--way=5",
+        "--trans_linear_out_dim=1152",
+        "--tasks_per_batch=16",
+        "--test_iters=75000",
+        "--dataset=ssv2",
+        "--split=3",
+        "-lr=0.001",
+        "--method=resnet18",
+        "--img_size=224",
+        "--scratch=bc",
+        "--num_workers=0",
+        "--print_freq=50",
+      ],
+      "console": "integratedTerminal"
+    }
+  ]
+}
