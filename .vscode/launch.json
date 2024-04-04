@@ -20,8 +20,9 @@
         "--method=resnet18",
         "--img_size=224",
         "--scratch=bc",
-        "--num_workers=0",
-        "--print_freq=50",
+        "--num_workers=4",
+        "--print_freq=10",
+        "--temp_set=2"
       ],
       "console": "integratedTerminal"
     }

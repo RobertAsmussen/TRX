@@ -12,13 +12,12 @@ from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import video_reader
-import random 
+import random
 
 
 def main():
     learner = Learner()
     learner.run()
-
 
 class Learner:
     def __init__(self):
@@ -129,7 +128,7 @@ class Learner:
         
         if args.dataset == "ssv2":
             args.traintestlist = os.path.join(args.scratch, "video_datasets\\splits\\somethingsomethingv2TrainTestlist")
-            args.path = os.path.join(args.scratch, "video_datasets\\data\\somethingsomethingv2_256x256q5_7l8.zip")
+            args.path = os.path.join(args.scratch, "video_datasets\\data\\somethingsomethingv2_256x256q5_7l5")
         elif args.dataset == "kinetics":
             args.traintestlist = os.path.join(args.scratch, "video_datasets\\splits\\kineticsTrainTestlist")
             args.path = os.path.join(args.scratch, "video_datasets/data/kinetics_256q5_1.zip")
@@ -144,7 +143,7 @@ class Learner:
 
     def run(self):
         config = tf.compat.v1.ConfigProto()
-        config.gpu_options.allow_growth = True
+        config.gpu_options.allow_growth = False
         with tf.compat.v1.Session(config=config) as session:
                 train_accuracies = []
                 losses = []
@@ -161,10 +160,10 @@ class Learner:
                     losses.append(task_loss)
 
                     # optimize
+                    self.scheduler.step()
                     if ((iteration + 1) % self.args.tasks_per_batch == 0) or (iteration == (total_iterations - 1)):
                         self.optimizer.step()
                         self.optimizer.zero_grad()
-                    self.scheduler.step()
                     if (iteration + 1) % self.args.print_freq == 0:
                         # print training stats
                         print_and_log(self.logfile,'Task [{}/{}], Train Loss: {:.7f}, Train Accuracy: {:.7f}'

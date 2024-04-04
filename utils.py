@@ -4,6 +4,7 @@ import os
 import math
 from enum import Enum
 import sys
+from datetime import datetime
 
 
 class TestAccuracies:
@@ -74,8 +75,10 @@ def print_and_log(log_file, message):
     """
     Helper function to print to the screen and the cnaps_layer_log.txt file.
     """
-    print(message, flush=True)
-    log_file.write(message + '\n')
+    timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+    formatted_message = f"{timestamp} {message}"
+    print(formatted_message, flush=True)
+    log_file.write(formatted_message + '\n')
 
 
 def get_log_files(checkpoint_dir, resume, test_mode):
