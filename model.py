@@ -60,22 +60,35 @@ class TemporalCrossTransformer(nn.Module):
     def forward(self, support_set, support_labels, queries):
         n_queries = queries.shape[0]
         n_support = support_set.shape[0]
-        
+        print(f"Queries shape: {queries.shape}")
+        print(f"Support Set shape: {support_set.shape}")
+
         # static pe
         support_set = self.pe(support_set)
         queries = self.pe(queries)
+        print(f"Queries shape after pe: {queries.shape}")
+        print(f"Support Set shape after pe: {support_set.shape}")
 
         # construct new queries and support set made of tuples of images after pe
         s = [torch.index_select(support_set, -2, p).reshape(n_support, -1) for p in self.tuples]
         q = [torch.index_select(queries, -2, p).reshape(n_queries, -1) for p in self.tuples]
+        print(f"Queries shape after tuples: {queries.shape}")
+        print(f"Support Set shape after tuples: {support_set.shape}")
         support_set = torch.stack(s, dim=-2)
         queries = torch.stack(q, dim=-2)
+        print(f"Tuples shape: {len(self.tuples)}")
+        print(f"Queries shape after stack: {queries.shape}")
+        print(f"Support Set shape after stack: {support_set.shape}")
 
         # apply linear maps
         support_set_ks = self.k_linear(support_set)
         queries_ks = self.k_linear(queries)
         support_set_vs = self.v_linear(support_set)
         queries_vs = self.v_linear(queries)
+        print(f"Queries shape after linear maps K: {queries_ks.shape}")
+        print(f"Support Set shape after linear maps K: {support_set_ks.shape}")
+        print(f"Queries Set shape after linear maps V: {queries_vs.shape}")
+        print(f"Support Set shape after linear maps V: {support_set_vs.shape}")
         
         # apply norms where necessary
         mh_support_set_ks = self.norm_k(support_set_ks)
@@ -96,7 +109,8 @@ class TemporalCrossTransformer(nn.Module):
             k_bs = class_k.shape[0]
 
             class_scores = torch.matmul(mh_queries_ks.unsqueeze(1), class_k.transpose(-2,-1)) / math.sqrt(self.args.trans_linear_out_dim)
-
+            print(f"Queries shape after unsqueeze: {mh_queries_ks.unsqueeze(1).shape}")
+            print(f"Class shape after transpose: {class_k.transpose(-2,-1).shape}")
             # reshape etc. to apply a softmax for each query tuple
             class_scores = class_scores.permute(0,2,1,3)
             class_scores = class_scores.reshape(n_queries, self.tuples_len, -1)

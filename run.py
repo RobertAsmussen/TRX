@@ -58,6 +58,16 @@ class Learner:
 
     def init_model(self):
         model = CNN_TRX(self.args)
+        total_params = sum(p.numel() for p in model.parameters())
+        total_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        transformer_params = sum(p.numel() for p in model.transformers.parameters())
+        kl_params = sum(p.numel() for p in (model.transformers)[0].k_linear.parameters())
+        vl_params = sum(p.numel() for p in (model.transformers)[0].v_linear.parameters())
+        pe_params = sum(p.numel() for p in (model.transformers)[0].pe.parameters())
+        ln_params = sum(p.numel() for p in (model.transformers)[0].norm_v.parameters())
+        
+        print(f"CNN_TRX Model: {model}")
+        print(f"Parameter: {total_params}, trainable Parameter: {total_trainable_params}, Transformer Parameter: {transformer_params} (v: {vl_params}, k: {kl_params}, norm: {ln_params}, pe: {pe_params})")
         model = model.to(self.device) 
         if self.args.num_gpus > 1:
             model.distribute_model()
@@ -76,7 +86,7 @@ class Learner:
     def parse_command_line(self):
         parser = argparse.ArgumentParser()
 
-        parser.add_argument("--dataset", choices=["ssv2", "kinetics", "hmdb", "ucf"], default="ssv2", help="Dataset to use.")
+        parser.add_argument("--dataset", choices=["ssv2", "kinetics", "hmdb", "ucf", "sp"], default="ssv2", help="Dataset to use.")
         parser.add_argument("--learning_rate", "-lr", type=float, default=0.001, help="Learning rate.")
         parser.add_argument("--tasks_per_batch", type=int, default=16, help="Number of tasks between parameter optimizations.")
         parser.add_argument("--checkpoint_dir", "-c", default=None, help="Directory to save checkpoint to.")
@@ -125,18 +135,29 @@ class Learner:
             args.trans_linear_in_dim = 2048
         else:
             args.trans_linear_in_dim = 512
-        
-        if args.dataset == "ssv2":
-            args.traintestlist = os.path.join(args.scratch, "video_datasets\\splits\\somethingsomethingv2TrainTestlist")
-            args.path = os.path.join(args.scratch, "video_datasets\\data\\somethingsomethingv2_256x256q5_7l5")
+
+        if args.dataset == "sp":
+            args.traintestlist = os.path.join(
+                args.scratch, "video_datasets\\splits\\surgicalphasev1TrainTestlist")
+            args.path = os.path.join(
+                args.scratch, "video_datasets\\data\\surgicalphasev1_Xx256")
+        elif args.dataset == "ssv2":
+            args.traintestlist = os.path.join(
+                args.scratch, "video_datasets\\splits\\somethingsomethingv2TrainTestlist")
+            args.path = os.path.join(
+                args.scratch, "video_datasets\\data\\somethingsomethingv2_256x256q5_7l5")
         elif args.dataset == "kinetics":
-            args.traintestlist = os.path.join(args.scratch, "video_datasets\\splits\\kineticsTrainTestlist")
-            args.path = os.path.join(args.scratch, "video_datasets/data/kinetics_256q5_1.zip")
+            args.traintestlist = os.path.join(
+                args.scratch, "video_datasets\\splits\\kineticsTrainTestlist")
+            args.path = os.path.join(
+                args.scratch, "video_datasets/data/kinetics_256q5_1.zip")
         elif args.dataset == "ucf":
-            args.traintestlist = os.path.join(args.scratch, "video_datasets\\splits\\ucfTrainTestlist")
+            args.traintestlist = os.path.join(
+                args.scratch, "video_datasets\\splits\\ucfTrainTestlist")
             args.path = os.path.join(args.scratch, "video_datasets\\data\\UCF-101_320.zip")
         elif args.dataset == "hmdb":
-            args.traintestlist = os.path.join(args.scratch, "video_datasets\\splits\\hmdb51TrainTestlist")
+            args.traintestlist = os.path.join(
+                args.scratch, "video_datasets\\splits\\hmdb51TrainTestlist")
             args.path = os.path.join(args.scratch, "video_datasets\\data\\hmdb51_256q5.zip")
 
         return args
@@ -166,15 +187,14 @@ class Learner:
                         self.optimizer.zero_grad()
                     if (iteration + 1) % self.args.print_freq == 0:
                         # print training stats
-                        print_and_log(self.logfile,'Task [{}/{}], Train Loss: {:.7f}, Train Accuracy: {:.7f}'
+                        print_and_log(self.logfile, 'Task [{}/{}], Train Loss: {:.7f}, Train Accuracy: {:.7f}, Used Classes: {}'
                                       .format(iteration + 1, total_iterations, torch.Tensor(losses).mean().item(),
-                                              torch.Tensor(train_accuracies).mean().item()))
+                                              torch.Tensor(train_accuracies).mean().item(), task_dict['real_target_labels_names']))
                         train_accuracies = []
                         losses = []
 
                     if ((iteration + 1) % self.args.save_freq == 0) and (iteration + 1) != total_iterations:
                         self.save_checkpoint(iteration + 1)
-
 
                     if ((iteration + 1) in self.args.test_iters) and (iteration + 1) != total_iterations:
                         accuracy_dict = self.test(session)

@@ -308,9 +308,10 @@ class VideoDataset(torch.utils.data.Dataset):
         target_labels = []
         real_support_labels = []
         real_target_labels = []
+        real_target_labels_names = []
 
         for bl, bc in enumerate(batch_classes):
-            
+            real_target_labels_names.append(self.class_folders[bc])
             #select shots from the chosen classes
             n_total = c.get_num_videos_for_class(bc)
             idxs = random.sample([i for i in range(n_total)], self.args.shot + n_queries)
@@ -324,6 +325,7 @@ class VideoDataset(torch.utils.data.Dataset):
                 target_set.append(vid)
                 target_labels.append(bl)
                 real_target_labels.append(bc)
+   
         
         s = list(zip(support_set, support_labels))
         random.shuffle(s)
@@ -340,6 +342,6 @@ class VideoDataset(torch.utils.data.Dataset):
         real_target_labels = torch.FloatTensor(real_target_labels)
         batch_classes = torch.FloatTensor(batch_classes) 
         
-        return {"support_set":support_set, "support_labels":support_labels, "target_set":target_set, "target_labels":target_labels, "real_target_labels":real_target_labels, "batch_class_list": batch_classes}
+        return {"support_set":support_set, "support_labels":support_labels, "target_set":target_set, "target_labels":target_labels, "real_target_labels":real_target_labels, "batch_class_list": batch_classes, "real_target_labels_names": real_target_labels_names}
 
 
