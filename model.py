@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from collections import OrderedDict
-from utils import split_first_dim_linear
+from utils import split_first_dim_linear, create_mask_TRX, delete_tuples
 import math
 from itertools import combinations 
 
@@ -48,47 +48,35 @@ class TemporalCrossTransformer(nn.Module):
         self.norm_k = nn.LayerNorm(self.args.trans_linear_out_dim)
         self.norm_v = nn.LayerNorm(self.args.trans_linear_out_dim)
         
-        self.class_softmax = torch.nn.Softmax(dim=1)
+        self.class_softmax = torch.nn.Softmax(dim=0)
         
         # generate all tuples
         frame_idxs = [i for i in range(self.args.seq_len)]
         frame_combinations = combinations(frame_idxs, temporal_set_size)
         self.tuples = [torch.tensor(comb).cuda() for comb in frame_combinations]
-        self.tuples_len = len(self.tuples) 
+        self.tuples_len = len(self.tuples)
+        self.tuples_mask = [torch.tensor(delete_tuples(self.args.seq_len, n, temporal_set_size)).cuda() for n in range(2, self.args.seq_len+1)]
     
-    
-    def forward(self, support_set, support_labels, queries):
+    def forward(self, support_set, support_labels, queries, support_n_frames, target_n_frames):
+        n_queries_tuples = torch.tensor([math.comb(int(p), self.temporal_set_size) for p in target_n_frames]).cuda()
         n_queries = queries.shape[0]
         n_support = support_set.shape[0]
-        print(f"Queries shape: {queries.shape}")
-        print(f"Support Set shape: {support_set.shape}")
 
         # static pe
         support_set = self.pe(support_set)
         queries = self.pe(queries)
-        print(f"Queries shape after pe: {queries.shape}")
-        print(f"Support Set shape after pe: {support_set.shape}")
 
         # construct new queries and support set made of tuples of images after pe
         s = [torch.index_select(support_set, -2, p).reshape(n_support, -1) for p in self.tuples]
         q = [torch.index_select(queries, -2, p).reshape(n_queries, -1) for p in self.tuples]
-        print(f"Queries shape after tuples: {queries.shape}")
-        print(f"Support Set shape after tuples: {support_set.shape}")
         support_set = torch.stack(s, dim=-2)
         queries = torch.stack(q, dim=-2)
-        print(f"Tuples shape: {len(self.tuples)}")
-        print(f"Queries shape after stack: {queries.shape}")
-        print(f"Support Set shape after stack: {support_set.shape}")
 
         # apply linear maps
         support_set_ks = self.k_linear(support_set)
         queries_ks = self.k_linear(queries)
         support_set_vs = self.v_linear(support_set)
         queries_vs = self.v_linear(queries)
-        print(f"Queries shape after linear maps K: {queries_ks.shape}")
-        print(f"Support Set shape after linear maps K: {support_set_ks.shape}")
-        print(f"Queries Set shape after linear maps V: {queries_vs.shape}")
-        print(f"Support Set shape after linear maps V: {support_set_vs.shape}")
         
         # apply norms where necessary
         mh_support_set_ks = self.norm_k(support_set_ks)
@@ -106,27 +94,44 @@ class TemporalCrossTransformer(nn.Module):
             # select keys and values for just this class
             class_k = torch.index_select(mh_support_set_ks, 0, self._extract_class_indices(support_labels, c))
             class_v = torch.index_select(mh_support_set_vs, 0, self._extract_class_indices(support_labels, c))
+            class_n_frames = torch.index_select(
+                support_n_frames, 0, self._extract_class_indices(support_labels, c))
             k_bs = class_k.shape[0]
 
             class_scores = torch.matmul(mh_queries_ks.unsqueeze(1), class_k.transpose(-2,-1)) / math.sqrt(self.args.trans_linear_out_dim)
-            print(f"Queries shape after unsqueeze: {mh_queries_ks.unsqueeze(1).shape}")
-            print(f"Class shape after transpose: {class_k.transpose(-2,-1).shape}")
+            # create mask for images smaller
+            create_mask_TRX(class_n_frames, target_n_frames, class_scores, self.tuples, self.args.seq_len)
             # reshape etc. to apply a softmax for each query tuple
             class_scores = class_scores.permute(0,2,1,3)
             class_scores = class_scores.reshape(n_queries, self.tuples_len, -1)
-            class_scores = [self.class_softmax(class_scores[i]) for i in range(n_queries)]
-            class_scores = torch.cat(class_scores)
-            class_scores = class_scores.reshape(n_queries, self.tuples_len, -1, self.tuples_len)
-            class_scores = class_scores.permute(0,2,1,3)
+            soft_class_scores = []
+
+            for i_q, query in enumerate(class_scores):
+                n_frames = int(target_n_frames[i_q])
+                mask = self.tuples_mask[n_frames-2]
+                soft_class_scores.append([])
+                for i_t, _ in enumerate(query):
+                    if i_t in mask:
+                        soft_class_scores[i_q].append(torch.zeros_like(class_scores[i_q][i_t]))
+                    else:
+                        soft_class_scores[i_q].append(self.class_softmax(class_scores[i_q][i_t]))
+            
+            soft_class_scores = [torch.cat(i) for i in soft_class_scores]
+            soft_class_scores = torch.cat(soft_class_scores)
+            #class_scores = [self.class_softmax(class_scores[i]) for i in range(n_queries)]
+            #class_scores = torch.cat(class_scores)
+            soft_class_scores = soft_class_scores.reshape(n_queries, self.tuples_len, -1, self.tuples_len)
+            soft_class_scores = soft_class_scores.permute(0,2,1,3)
             
             # get query specific class prototype         
-            query_prototype = torch.matmul(class_scores, class_v)
+            query_prototype = torch.matmul(soft_class_scores, class_v)
             query_prototype = torch.sum(query_prototype, dim=1)
             
             # calculate distances from queries to query-specific class prototypes
             diff = mh_queries_vs - query_prototype
+            diff = torch.nan_to_num(diff)
             norm_sq = torch.norm(diff, dim=[-2,-1])**2
-            distance = torch.div(norm_sq, self.tuples_len)
+            distance = torch.div(norm_sq, n_queries_tuples)
             
             # multiply by -1 to get logits
             distance = distance * -1
@@ -175,7 +180,7 @@ class CNN_TRX(nn.Module):
 
         self.transformers = nn.ModuleList([TemporalCrossTransformer(args, s) for s in args.temp_set]) 
 
-    def forward(self, context_images, context_labels, target_images):
+    def forward(self, context_images, context_labels, target_images, support_n_frames, target_n_frames):
 
         context_features = self.resnet(context_images).squeeze()
         target_features = self.resnet(target_images).squeeze()
@@ -185,7 +190,8 @@ class CNN_TRX(nn.Module):
         context_features = context_features.reshape(-1, self.args.seq_len, dim)
         target_features = target_features.reshape(-1, self.args.seq_len, dim)
 
-        all_logits = [t(context_features, context_labels, target_features)['logits'] for t in self.transformers]
+        all_logits = [t(context_features, context_labels, target_features,
+                        support_n_frames, target_n_frames)['logits'] for t in self.transformers]
         all_logits = torch.stack(all_logits, dim=-1)
         sample_logits = all_logits 
         sample_logits = torch.mean(sample_logits, dim=[-1])
@@ -210,17 +216,17 @@ if __name__ == "__main__":
     class ArgsObject(object):
         def __init__(self):
             self.trans_linear_in_dim = 512
-            self.trans_linear_out_dim = 128
+            self.trans_linear_out_dim = 512
 
-            self.way = 5
-            self.shot = 1
-            self.query_per_class = 5
+            self.way = 2
+            self.shot = 3
+            self.query_per_class = 1
             self.trans_dropout = 0.1
-            self.seq_len = 8 
+            self.seq_len = 4
             self.img_size = 84
             self.method = "resnet18"
             self.num_gpus = 1
-            self.temp_set = [2,3]
+            self.temp_set = [2]
     args = ArgsObject()
     torch.manual_seed(0)
     
@@ -229,11 +235,11 @@ if __name__ == "__main__":
     
     support_imgs = torch.rand(args.way * args.shot * args.seq_len,3, args.img_size, args.img_size).to(device)
     target_imgs = torch.rand(args.way * args.query_per_class * args.seq_len ,3, args.img_size, args.img_size).to(device)
-    support_labels = torch.tensor([0,1,2,3,4]).to(device)
+    support_labels = torch.tensor([0,1,0,1,0,1]).to(device)
 
     print("Support images input shape: {}".format(support_imgs.shape))
     print("Target images input shape: {}".format(target_imgs.shape))
-    print("Support labels input shape: {}".format(support_imgs.shape))
+    print("Support labels input shape: {}".format(support_labels.shape))
 
     out = model(support_imgs, support_labels, target_imgs)
 

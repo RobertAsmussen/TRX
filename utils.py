@@ -6,6 +6,45 @@ from enum import Enum
 import sys
 from datetime import datetime
 
+def create_mask_Tuples(support_set_length, query_set_lengths, seq_len):
+    support_set_tuples = []
+    query_set_tuples = []
+
+
+def delete_tuples(l, n, temporal_set_size):
+    id_to_delete_list = []
+    counter = 0
+    begin = n
+    end = 0
+    binomial_coefficant = 1
+    while end < begin:
+        counter += 1
+        end = counter*l - binomial_coefficant
+        id_to_delete_list.extend([i for i in range(begin-1, end)])
+        binomial_coefficant = math.comb(
+            temporal_set_size + counter, temporal_set_size)
+        begin = (counter * l) + n - binomial_coefficant + 1
+
+    begin = end + 1
+    end = math.comb(l, temporal_set_size)
+    if (begin <= end):
+      id_to_delete_list.extend([i for i in range(begin-1, end)])
+    return id_to_delete_list
+
+def create_mask(support_set_length, query_set_length, attention_map, tuples, seq_len):
+  if support_set_length == seq_len and query_set_length == seq_len:
+    return
+  for id, t in enumerate(tuples):
+    if t[0] >= support_set_length or t[1] >= support_set_length:
+      attention_map[:, id] = float('-inf')
+#    if t[0] >= query_set_length or t[1] >= query_set_length:
+#      attention_map[id, :] = float('-inf')
+
+
+def create_mask_TRX(support_set_lengths, query_set_lengths, attention_maps, tuples, seq_len):
+  for id_q, q_length in enumerate(query_set_lengths):
+    for id_s, s_length in enumerate(support_set_lengths):
+      create_mask(s_length, q_length, attention_maps[id_q][id_s], tuples, seq_len)
 
 class TestAccuracies:
     """

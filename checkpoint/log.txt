@@ -1,4 +1,0 @@
-[2024-04-09 18:01:51] Options: Namespace(dataset='sp', learning_rate=0.001, tasks_per_batch=16, checkpoint_dir='checkpoint', test_model_path=None, training_iterations=1001, resume_from_checkpoint=False, way=5, shot=5, query_per_class=2, query_per_class_test=1, test_iters=[10, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000], num_test_tasks=10, print_freq=10, seq_len=12, num_workers=4, method='resnet18', trans_linear_out_dim=1152, opt='sgd', trans_dropout=0.1, save_freq=500, img_size=224, temp_set=[2], scratch='', num_gpus=1, debug_loader=False, split=2, sch=[1000000], trans_linear_in_dim=512, traintestlist='video_datasets\\splits\\surgicalphasev1TrainTestlist', path='video_datasets\\data\\surgicalphasev1_Xx256')
-
-[2024-04-09 18:01:51] Checkpoint Directory: checkpoint
-

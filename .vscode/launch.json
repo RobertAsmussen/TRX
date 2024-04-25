@@ -37,7 +37,7 @@
         "--img_size=224",
         "--temp_set=2",
         "--scratch=bc",
-        "--split=2"
+        "--split=3"
       ],
       "console": "integratedTerminal"
     }

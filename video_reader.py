@@ -18,10 +18,16 @@ class Split():
     def __init__(self):
         self.gt_a_list = []
         self.videos = []
-    
+        self.surgery_list = []
+
     def add_vid(self, paths, gt_a):
         self.videos.append(paths)
         self.gt_a_list.append(gt_a)
+
+    def add_vid(self, paths, gt_a, surgery):
+        self.videos.append(paths)
+        self.gt_a_list.append(gt_a)
+        self.surgery_list.append(surgery)
 
     def get_rand_vid(self, label, idx=-1):
         match_idxs = []
@@ -39,6 +45,16 @@ class Split():
 
     def get_unique_classes(self):
         return list(set(self.gt_a_list))
+
+    def get_unique_surgery_classes(self):
+        surgeries = list(set(self.surgery_list))
+        random_surgery = np.random.choice(surgeries)
+        surgery_classes = set()
+        for i in range(len(self.surgery_list)):
+            if self.surgery_list[i] == random_surgery:
+                surgery_classes.add(self.gt_a_list[i])
+
+        return list(surgery_classes)
 
     def get_max_video_len(self):
         max_len = 0
@@ -111,6 +127,7 @@ class VideoDataset(torch.utils.data.Dataset):
         else:
             self.zip = False
 
+        short_videos = 0
         # go through zip and populate splits with frame locations and action groundtruths
         if self.zip:
             dir_list = list(set([x for x in self.zfile.namelist() if '.jpg' not in x]))
@@ -163,8 +180,15 @@ class VideoDataset(torch.utils.data.Dataset):
         else:
             class_folders = os.listdir(self.data_dir)
             class_folders.sort()
+            # addition for surgery dataset
+            if self.args.dataset == 'sp':
+                surgeries = list(set([i.split('_')[0] for i in class_folders]))
+                surgeries.sort
+
             self.class_folders = class_folders
+            self.surgeries = surgeries
             for class_folder in class_folders:
+
                 video_folders = os.listdir(os.path.join(self.data_dir, class_folder))
                 video_folders.sort()
                 if self.args.debug_loader:
@@ -175,14 +199,21 @@ class VideoDataset(torch.utils.data.Dataset):
                         continue
                     imgs = os.listdir(os.path.join(self.data_dir, class_folder, video_folder))
                     if len(imgs) < self.seq_len:
-                        continue            
+                        short_videos += 1
+#                        continue            
                     imgs.sort()
                     paths = [os.path.join(self.data_dir, class_folder, video_folder, img) for img in imgs]
                     paths.sort()
                     class_id =  class_folders.index(class_folder)
-                    c.add_vid(paths, class_id)
+                    if self.args.dataset == 'sp':
+                        surgery_id = surgeries.index(class_folder.split('_')[0])
+                        c.add_vid(paths, class_id, surgery_id)
+                    else:
+                        c.add_vid(paths, class_id)
+                        
         print("loaded {}".format(self.data_dir))
         print("train: {}, test: {}".format(len(self.train_split), len(self.test_split)))
+        print(f"short videos: {short_videos}")
 
     """ return the current split being used """
     def get_train_or_test_db(self, split=None):
@@ -250,51 +281,65 @@ class VideoDataset(torch.utils.data.Dataset):
         c = self.get_train_or_test_db()
         paths, vid_id = c.get_rand_vid(label, idx) 
         n_frames = len(paths)
-        if n_frames == self.args.seq_len:
-            idxs = [int(f) for f in range(n_frames)]
-        else:
-            if self.train:
-                excess_frames = n_frames - self.seq_len
-                excess_pad = int(min(5, excess_frames / 2))
-                if excess_pad < 1:
-                    start = 0
-                    end = n_frames - 1
-                else:
-                    start = random.randint(0, excess_pad)
-                    end = random.randint(n_frames-1 -excess_pad, n_frames-1)
-            else:
-                start = 1
-                end = n_frames - 2
-    
-            if end - start < self.seq_len:
-                end = n_frames - 1
-                start = 0
-            else:
-                pass
-    
-            idx_f = np.linspace(start, end, num=self.seq_len)
-            idxs = [int(f) for f in idx_f]
-            
-            if self.seq_len == 1:
-                idxs = [random.randint(start, end-1)]
+#        if n_frames == self.args.seq_len:
+#            idxs = [int(f) for f in range(n_frames)]
+#        else:
+#            if self.train:
+#                excess_frames = n_frames - self.seq_len
+#                excess_pad = int(min(5, excess_frames / 2))
+#                if excess_pad < 1:
+#                    start = 0
+#                    end = n_frames - 1
+#                else:
+#                    start = random.randint(0, excess_pad)
+#                    end = random.randint(n_frames-1 -excess_pad, n_frames-1)
+#            else:
+#                start = 1
+#                end = n_frames - 2
+#    
+#            if end - start < self.seq_len:
+#                end = n_frames - 1
+#                start = 0
+#            else:
+#                pass
+#    
+#            idx_f = np.linspace(start, end, num=self.seq_len)
 
-        imgs = [self.read_single_image(paths[i]) for i in idxs]
+            
+#            if self.seq_len == 1:
+#                idxs = [random.randint(start, end-1)]
+        excess_frames = n_frames - self.seq_len
+        if excess_frames <= 0:
+            start = 0
+            end = n_frames - 1
+        else:
+            excess_pad = int(min(5, excess_frames / 2))
+            start = random.randint(0, excess_pad)
+            end = random.randint(n_frames-1 -excess_pad, n_frames-1)
+            n_frames = self.seq_len
+        idx_f = np.linspace(start, end, num=n_frames)
+        imgs = [self.read_single_image(paths[int(i)]) for i in idx_f]
         if (self.transform is not None):
             if self.train:
                 transform = self.transform["train"]
             else:
                 transform = self.transform["test"]
             
-            imgs = [self.tensor_transform(v) for v in transform(imgs)]
-            imgs = torch.stack(imgs)
-        return imgs, vid_id
+        imgs = [self.tensor_transform(v) for v in transform(imgs)]
+        imgs = torch.stack(imgs)
+        if(excess_frames < 0):
+            imgs = torch.nn.functional.pad(imgs, (0, 0, 0, 0, 0, 0, 0, -excess_frames), "constant", 0)
+        return imgs, vid_id, n_frames
 
 
     """returns dict of support and target images and labels"""
     def __getitem__(self, index):
         #select classes to use for this task
         c = self.get_train_or_test_db()
-        classes = c.get_unique_classes()
+        if self.args.dataset == 'sp':
+            classes = c.get_unique_surgery_classes()
+        else:
+            classes = c.get_unique_classes()
         batch_classes = random.sample(classes, self.way)
 
         if self.train:
@@ -304,8 +349,10 @@ class VideoDataset(torch.utils.data.Dataset):
 
         support_set = []
         support_labels = []
+        support_n_frames = []
         target_set = []
         target_labels = []
+        target_n_frames = []
         real_support_labels = []
         real_target_labels = []
         real_target_labels_names = []
@@ -317,14 +364,16 @@ class VideoDataset(torch.utils.data.Dataset):
             idxs = random.sample([i for i in range(n_total)], self.args.shot + n_queries)
 
             for idx in idxs[0:self.args.shot]:
-                vid, vid_id = self.get_seq(bc, idx)
+                vid, vid_id, n_frames = self.get_seq(bc, idx)
                 support_set.append(vid)
                 support_labels.append(bl)
+                support_n_frames.append(n_frames)
             for idx in idxs[self.args.shot:]:
-                vid, vid_id = self.get_seq(bc, idx)
+                vid, vid_id, n_frames = self.get_seq(bc, idx)
                 target_set.append(vid)
                 target_labels.append(bl)
                 real_target_labels.append(bc)
+                target_n_frames.append(n_frames)
    
         
         s = list(zip(support_set, support_labels))
@@ -340,8 +389,18 @@ class VideoDataset(torch.utils.data.Dataset):
         support_labels = torch.FloatTensor(support_labels)
         target_labels = torch.FloatTensor(target_labels)
         real_target_labels = torch.FloatTensor(real_target_labels)
-        batch_classes = torch.FloatTensor(batch_classes) 
+        batch_classes = torch.FloatTensor(batch_classes)
+        support_n_frames = torch.FloatTensor(support_n_frames)
+        target_n_frames = torch.FloatTensor(target_n_frames)
         
-        return {"support_set":support_set, "support_labels":support_labels, "target_set":target_set, "target_labels":target_labels, "real_target_labels":real_target_labels, "batch_class_list": batch_classes, "real_target_labels_names": real_target_labels_names}
+        return {"support_set":support_set, 
+                "support_labels":support_labels, 
+                "target_set":target_set, 
+                "target_labels":target_labels, 
+                "real_target_labels":real_target_labels, 
+                "batch_class_list":batch_classes, 
+                "real_target_labels_names":real_target_labels_names,
+                "support_n_frames":support_n_frames,
+                "target_n_frames":target_n_frames}
 
 

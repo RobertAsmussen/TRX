@@ -121,7 +121,7 @@ class Learner:
             args.scratch = ""
         elif args.scratch == "bp":
             args.num_gpus = 4
-            # this is low becuase of RAM constraints for the data loader
+            # this is low because of RAM constraints for the data loader
             args.num_workers = 3
             args.scratch = "\\work\\tp8961"
         
@@ -177,14 +177,19 @@ class Learner:
                     torch.set_grad_enabled(True)
 
                     task_loss, task_accuracy = self.train_task(task_dict)
+                    print(f"task accuracy: {task_accuracy}")
+                    print(
+                        f"support frames: {task_dict['support_n_frames']}, target frames: {task_dict['target_n_frames']}")
+                    print(f"Used classes: {task_dict['real_target_labels_names']}")
+
                     train_accuracies.append(task_accuracy)
                     losses.append(task_loss)
 
                     # optimize
-                    self.scheduler.step()
                     if ((iteration + 1) % self.args.tasks_per_batch == 0) or (iteration == (total_iterations - 1)):
                         self.optimizer.step()
                         self.optimizer.zero_grad()
+                    self.scheduler.step()
                     if (iteration + 1) % self.args.print_freq == 0:
                         # print training stats
                         print_and_log(self.logfile, 'Task [{}/{}], Train Loss: {:.7f}, Train Accuracy: {:.7f}, Used Classes: {}'
@@ -207,11 +212,10 @@ class Learner:
         self.logfile.close()
 
     def train_task(self, task_dict):
-        context_images, target_images, context_labels, target_labels, real_target_labels, batch_class_list = self.prepare_task(task_dict)
-
-        model_dict = self.model(context_images, context_labels, target_images)
+        context_images, target_images, context_labels, target_labels, real_target_labels, batch_class_list, support_n_frames ,target_n_frames = self.prepare_task(
+                        task_dict)
+        model_dict = self.model(context_images, context_labels, target_images, support_n_frames, target_n_frames)
         target_logits = model_dict['logits']
-
         task_loss = self.loss(target_logits, target_labels, self.device) / self.args.tasks_per_batch
         task_accuracy = self.accuracy_fn(target_logits, target_labels)
 
@@ -233,8 +237,9 @@ class Learner:
                         break
                     iteration += 1
 
-                    context_images, target_images, context_labels, target_labels, real_target_labels, batch_class_list = self.prepare_task(task_dict)
-                    model_dict = self.model(context_images, context_labels, target_images)
+                    context_images, target_images, context_labels, target_labels, real_target_labels, batch_class_list, support_n_frames ,target_n_frames = self.prepare_task(
+                        task_dict)
+                    model_dict = self.model(context_images, context_labels, target_images, support_n_frames, target_n_frames)
                     target_logits = model_dict['logits']
                     accuracy = self.accuracy_fn(target_logits, target_labels)
                     accuracies.append(accuracy.item())
@@ -255,14 +260,18 @@ class Learner:
         target_images, target_labels = task_dict['target_set'][0], task_dict['target_labels'][0]
         real_target_labels = task_dict['real_target_labels'][0]
         batch_class_list = task_dict['batch_class_list'][0]
+        support_n_frames = task_dict['support_n_frames'][0]
+        target_n_frames = task_dict['target_n_frames'][0]
 
         if images_to_device:
             context_images = context_images.to(self.device)
             target_images = target_images.to(self.device)
         context_labels = context_labels.to(self.device)
         target_labels = target_labels.type(torch.LongTensor).to(self.device)
+        support_n_frames = support_n_frames.to(self.device)
+        target_n_frames = target_n_frames.to(self.device)
 
-        return context_images, target_images, context_labels, target_labels, real_target_labels, batch_class_list  
+        return context_images, target_images, context_labels, target_labels, real_target_labels, batch_class_list, support_n_frames, target_n_frames
 
     def shuffle(self, images, labels):
         """
@@ -270,7 +279,6 @@ class Learner:
         """
         permutation = np.random.permutation(images.shape[0])
         return images[permutation], labels[permutation]
-
 
     def save_checkpoint(self, iteration):
         d = {'iteration': iteration,
@@ -287,7 +295,6 @@ class Learner:
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         self.scheduler.load_state_dict(checkpoint['scheduler'])
-
 
 if __name__ == "__main__":
     main()
