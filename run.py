@@ -123,7 +123,7 @@ class Learner:
             args.num_gpus = 4
             # this is low because of RAM constraints for the data loader
             args.num_workers = 3
-            args.scratch = "\\work\\tp8961"
+            args.scratch = os.path.join(os.sep, "work", "tp8961")
         
         if args.checkpoint_dir == None:
             print("need to specify a checkpoint dir")
@@ -138,27 +138,27 @@ class Learner:
 
         if args.dataset == "sp":
             args.traintestlist = os.path.join(
-                args.scratch, "video_datasets\\splits\\surgicalphasev1TrainTestlist")
+                args.scratch, "video_datasets","splits","surgicalphasev1TrainTestlist")
             args.path = os.path.join(
-                args.scratch, "video_datasets\\data\\surgicalphasev1_Xx256")
+                args.scratch, "video_datasets", "data", "surgicalphasev1_Xx256")
         elif args.dataset == "ssv2":
             args.traintestlist = os.path.join(
-                args.scratch, "video_datasets\\splits\\somethingsomethingv2TrainTestlist")
+                args.scratch, "video_datasets","splits", "somethingsomethingv2TrainTestlist")
             args.path = os.path.join(
-                args.scratch, "video_datasets\\data\\somethingsomethingv2_256x256q5_7l5")
+                args.scratch, "video_datasets", "data", "somethingsomethingv2_256x256q5_7l5")
         elif args.dataset == "kinetics":
             args.traintestlist = os.path.join(
-                args.scratch, "video_datasets\\splits\\kineticsTrainTestlist")
+                args.scratch, "video_datasets", "splits", "kineticsTrainTestlist")
             args.path = os.path.join(
-                args.scratch, "video_datasets/data/kinetics_256q5_1.zip")
+                args.scratch, "video_datasets", "data", "kinetics_256q5_1.zip")
         elif args.dataset == "ucf":
             args.traintestlist = os.path.join(
-                args.scratch, "video_datasets\\splits\\ucfTrainTestlist")
-            args.path = os.path.join(args.scratch, "video_datasets\\data\\UCF-101_320.zip")
+                args.scratch, "video_datasets", "splits", "ucfTrainTestlist")
+            args.path = os.path.join(args.scratch, "video_datasets", "data", "UCF-101_320.zip")
         elif args.dataset == "hmdb":
             args.traintestlist = os.path.join(
-                args.scratch, "video_datasets\\splits\\hmdb51TrainTestlist")
-            args.path = os.path.join(args.scratch, "video_datasets\\data\\hmdb51_256q5.zip")
+                args.scratch, "video_datasets", "splits", "hmdb51TrainTestlist")
+            args.path = os.path.join(args.scratch, "video_datasets", "data", "hmdb51_256q5.zip")
 
         return args
 
