@@ -177,10 +177,10 @@ class Learner:
                     torch.set_grad_enabled(True)
 
                     task_loss, task_accuracy = self.train_task(task_dict)
-                    print(f"task accuracy: {task_accuracy}")
-                    print(
-                        f"support frames: {task_dict['support_n_frames']}, target frames: {task_dict['target_n_frames']}")
-                    print(f"Used classes: {task_dict['real_target_labels_names']}")
+                    #print(f"task accuracy: {task_accuracy}")
+                    #print(
+                    #    f"support frames: {task_dict['support_n_frames']}, target frames: {task_dict['target_n_frames']}")
+                    #print(f"Used classes: {task_dict['real_target_labels_names']}")
 
                     train_accuracies.append(task_accuracy)
                     losses.append(task_loss)
@@ -203,6 +203,9 @@ class Learner:
 
                     if ((iteration + 1) in self.args.test_iters) and (iteration + 1) != total_iterations:
                         accuracy_dict = self.test(session)
+                        print_and_log(self.logfile, 'Task [{}/{}], Train Loss: {:.7f}, Train Accuracy: {:.7f}, Used Classes: {}'
+                                      .format(iteration + 1, total_iterations, accuracy_dict[self.args.dataset]["accuracy"],
+                                              accuracy_dict[self.args.dataset]["confidence"] , accuracy_dict['real_target_labels_names']))
                         print(accuracy_dict)
                         self.test_accuracies.print(self.logfile, accuracy_dict)
 
