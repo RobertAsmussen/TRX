@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from collections import OrderedDict
-from utils import split_first_dim_linear, create_mask_TRX, delete_tuples
+from utils import split_first_dim_linear, set_support_to_neginf, tuples_to_delete
 import math
 from itertools import combinations 
 
@@ -55,7 +55,7 @@ class TemporalCrossTransformer(nn.Module):
         frame_combinations = combinations(frame_idxs, temporal_set_size)
         self.tuples = [torch.tensor(comb).cuda() for comb in frame_combinations]
         self.tuples_len = len(self.tuples)
-        self.tuples_mask = [torch.tensor(delete_tuples(self.args.seq_len, n, temporal_set_size)).cuda() for n in range(2, self.args.seq_len+1)]
+        self.tuples_mask = [torch.tensor(tuples_to_delete(self.args.seq_len, n, temporal_set_size)).cuda() for n in range(2, self.args.seq_len+1)]
     
     def forward(self, support_set, support_labels, queries, support_n_frames, target_n_frames):
         n_queries_tuples = torch.tensor([math.comb(int(p), self.temporal_set_size) for p in target_n_frames]).cuda()
@@ -99,8 +99,8 @@ class TemporalCrossTransformer(nn.Module):
             k_bs = class_k.shape[0]
 
             class_scores = torch.matmul(mh_queries_ks.unsqueeze(1), class_k.transpose(-2,-1)) / math.sqrt(self.args.trans_linear_out_dim)
-            # create mask for images smaller
-            create_mask_TRX(class_n_frames, target_n_frames, class_scores, self.tuples, self.args.seq_len)
+            # Set support set videos smaller then seq_len to neginf
+            set_support_to_neginf(self.tuples_mask, class_n_frames, class_scores)
             # reshape etc. to apply a softmax for each query tuple
             class_scores = class_scores.permute(0,2,1,3)
             class_scores = class_scores.reshape(n_queries, self.tuples_len, -1)
