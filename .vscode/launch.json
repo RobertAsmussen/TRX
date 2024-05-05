@@ -16,8 +16,8 @@
         "--shot=5",
         "--query_per_class=2",
         "--test_iters",
-        "10",
-        "--num_test_tasks=10",
+        "10000",
+        "--num_test_tasks=10000",
         "--print_freq=16",
         "--seq_len=12",
         "--num_workers=4",
@@ -27,7 +27,7 @@
         "--img_size=224",
         "--scratch=bc",
         "--split=3",
-        "--temp_set=3"
+        "--temp_set=2"
       ],
       "console": "integratedTerminal"
     }
