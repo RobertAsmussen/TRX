@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from collections import OrderedDict
-from utils import split_first_dim_linear, set_support_to_neginf, tuples_to_delete
+from utils import split_first_dim_linear, create_support_mask, tuples_to_delete
 import math
 from itertools import combinations 
 
@@ -97,10 +97,11 @@ class TemporalCrossTransformer(nn.Module):
             class_n_frames = torch.index_select(
                 support_n_frames, 0, self._extract_class_indices(support_labels, c))
             k_bs = class_k.shape[0]
-
-            class_scores = torch.matmul(mh_queries_ks.unsqueeze(1), class_k.transpose(-2,-1)) / math.sqrt(self.args.trans_linear_out_dim)
+            
+            class_scores_matmul = torch.matmul(mh_queries_ks.unsqueeze(1), class_k.transpose(-2,-1)) / math.sqrt(self.args.trans_linear_out_dim)
             # Set support set videos smaller then seq_len to neginf
-            set_support_to_neginf(self.tuples_mask, class_n_frames, class_scores)
+            support_set_mask = create_support_mask(self.tuples_mask, class_n_frames, class_scores_matmul, self.args.seq_len)
+            class_scores = class_scores_matmul + support_set_mask
             # reshape etc. to apply a softmax for each query tuple
             class_scores = class_scores.permute(0,2,1,3)
             class_scores = class_scores.reshape(n_queries, self.tuples_len, -1)
@@ -129,7 +130,6 @@ class TemporalCrossTransformer(nn.Module):
             
             # calculate distances from queries to query-specific class prototypes
             diff = mh_queries_vs - query_prototype
-            diff = torch.nan_to_num(diff)
             norm_sq = torch.norm(diff, dim=[-2,-1])**2
             distance = torch.div(norm_sq, n_queries_tuples)
             

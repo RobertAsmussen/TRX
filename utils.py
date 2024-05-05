@@ -35,12 +35,15 @@ def set_to_neginf(mask, map):
     for id in mask:
         map[:, id] = float('-inf')
 
-def set_support_to_neginf(tuples_mask, support_n_frames, attention_maps):
-  for id_q, queries in enumerate(attention_maps):
-    for id_s, support in enumerate(queries):
-        n_frames = int(support_n_frames[id_s])
-        mask = tuples_mask[n_frames-2]
-        set_to_neginf(mask, attention_maps[id_q][id_s])
+def create_support_mask(tuples_mask, support_n_frames, attention_maps, seq_len = -1):
+    ams = torch.zeros_like(attention_maps, device=attention_maps.device) 
+    for id_q, queries in enumerate(ams):
+        for id_s, _ in enumerate(queries):
+            n_frames = int(support_n_frames[id_s])
+            if n_frames != seq_len:
+                mask = tuples_mask[n_frames-2]
+                set_to_neginf(mask, ams[id_q][id_s])
+    return ams
 
 class TestAccuracies:
     """

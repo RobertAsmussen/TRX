@@ -56,6 +56,17 @@ class Learner:
             self.load_checkpoint()
         self.optimizer.zero_grad()
 
+        self.writer.add_hparams({'dataset': self.args.dataset,
+                                'backbone': self.args.method,
+                                'sequenz length': self.args.seq_len,
+                                'way': self.args.way,
+                                'shot': self.args.shot,
+                                'training iterations': self.args.training_iterations,
+                                'number of tasks to test on': self.args.num_test_tasks,
+                                'tasks per batch': self.args.tasks_per_batch,
+                                'lr': self.args.learning_rate, 
+                                'optimizer': self.args.opt},{} )
+
     def init_model(self):
         model = CNN_TRX(self.args)
         total_params = sum(p.numel() for p in model.parameters())
@@ -195,6 +206,8 @@ class Learner:
                         print_and_log(self.logfile, 'Task [{}/{}], Train Loss: {:.7f}, Train Accuracy: {:.7f}, Used Classes: {}'
                                       .format(iteration + 1, total_iterations, torch.Tensor(losses).mean().item(),
                                               torch.Tensor(train_accuracies).mean().item(), task_dict['real_target_labels_names']))
+                        self.writer.add_scalar('Loss/train', torch.Tensor(losses).mean().item(), iteration)
+                        self.writer.add_scalar('Accuracy/train', torch.Tensor(train_accuracies).mean().item(), iteration)
                         train_accuracies = []
                         losses = []
 
@@ -203,11 +216,10 @@ class Learner:
 
                     if ((iteration + 1) in self.args.test_iters) and (iteration + 1) != total_iterations:
                         accuracy_dict = self.test(session)
-                        print_and_log(self.logfile, 'Task [{}/{}], Train Loss: {:.7f}, Train Accuracy: {:.7f}, Used Classes: {}'
+                        print_and_log(self.logfile, 'Task [{}/{}], Test Loss: {:.7f}, Test Confidence: {:.7f}'
                                       .format(iteration + 1, total_iterations, accuracy_dict[self.args.dataset]["accuracy"],
-                                              accuracy_dict[self.args.dataset]["confidence"] , accuracy_dict['real_target_labels_names']))
-                        print(accuracy_dict)
-                        self.test_accuracies.print(self.logfile, accuracy_dict)
+                                              accuracy_dict[self.args.dataset]['confidence']))
+                        #self.test_accuracies.print(self.logfile, accuracy_dict)
 
                 # save the final model
                 torch.save(self.model.state_dict(), self.checkpoint_path_final)
