@@ -55,7 +55,7 @@ class TemporalCrossTransformer(nn.Module):
         frame_combinations = combinations(frame_idxs, temporal_set_size)
         self.tuples = [torch.tensor(comb).cuda() for comb in frame_combinations]
         self.tuples_len = len(self.tuples)
-        self.tuples_mask = [torch.tensor(tuples_to_delete(self.args.seq_len, n, temporal_set_size)).cuda() for n in range(2, self.args.seq_len+1)]
+        self.tuples_mask = [torch.tensor(tuples_to_delete(self.args.seq_len, n, temporal_set_size)).cuda() for n in range(self.args.seq_len+1)]
     
     def forward(self, support_set, support_labels, queries, support_n_frames, target_n_frames):
         n_queries_tuples = torch.tensor([math.comb(int(p), self.temporal_set_size) for p in target_n_frames]).cuda()
@@ -109,7 +109,7 @@ class TemporalCrossTransformer(nn.Module):
 
             for i_q, query in enumerate(class_scores):
                 n_frames = int(target_n_frames[i_q])
-                mask = self.tuples_mask[n_frames-2]
+                mask = self.tuples_mask[n_frames]
                 soft_class_scores.append([])
                 for i_t, _ in enumerate(query):
                     if i_t in mask:

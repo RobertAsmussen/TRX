@@ -53,23 +53,10 @@ def create_mask_TRX(support_set_lengths, query_set_lengths, attention_maps, tupl
 
 
 def delete_tuples(l, n, temporal_set_size):
-    id_to_delete_list = []
-    counter = 0
-    begin = n
-    end = 0
-    binomial_coefficant = 1
-    while end < begin:
-        counter += 1
-        end = counter*l - binomial_coefficant
-        id_to_delete_list.extend([i for i in range(begin-1, end)])
-        binomial_coefficant = math.comb(
-            temporal_set_size + counter, temporal_set_size)
-        begin = (counter * l) + n - binomial_coefficant + 1
-
-    begin = end + 1
-    end = math.comb(l, temporal_set_size)
-    if (begin <= end):
-      id_to_delete_list.extend([i for i in range(begin-1, end)])
+    frame_idxs = [i for i in range(1, l+1)]
+    frame_combinations = combinations(frame_idxs, temporal_set_size)
+    cardinality_combs = [comb for comb in frame_combinations]
+    id_to_delete_list = [id for id, t in enumerate(cardinality_combs) if any (x > n for x in t)]
     return id_to_delete_list
 
 #rand_tensor = torch.randn(7, 256, 3)
@@ -103,16 +90,16 @@ def delete_tuples(l, n, temporal_set_size):
 class_softmax = torch.nn.Softmax(dim=0)
 class_scores = torch.randn(5, 66, 10)
 target_n_frames = [10,12,8,6,5]
-tuples_mask = [torch.tensor(delete_tuples(12, n, 2)).cuda() for n in range(2, 13)]
+tuples_mask = [torch.tensor(delete_tuples(12, n, 3)).cuda() for n in range(0, 13)]
 
-for i_q, query in enumerate(class_scores):
-    n_frames = target_n_frames[i_q]
-    mask = tuples_mask[n_frames-2]
-    for i_t, query in enumerate(query):
-        if i_t in mask:
-            class_scores[i_q][i_t] = 0
-        else:
-            query = class_softmax(query)
-            class_scores[i_q][i_t] = query
+#for i_q, query in enumerate(class_scores):
+#    n_frames = target_n_frames[i_q]
+#    mask = tuples_mask[n_frames-2]
+#    for i_t, query in enumerate(query):
+#        if i_t in mask:
+#            class_scores[i_q][i_t] = 0
+#        else:
+#            query = class_softmax(query)
+#            class_scores[i_q][i_t] = query
 
 print("Test Ende")

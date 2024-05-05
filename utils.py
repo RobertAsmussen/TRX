@@ -5,30 +5,15 @@ import math
 from enum import Enum
 import sys
 from datetime import datetime
-
-def create_mask_Tuples(support_set_length, query_set_lengths, seq_len):
-    support_set_tuples = []
-    query_set_tuples = []
+from itertools import combinations
 
 
-def tuples_to_delete(l, n, temporal_set_size):
-    id_to_delete_list = []
-    counter = 0
-    begin = n
-    end = 0
-    binomial_coefficant = 1
-    while end < begin:
-        counter += 1
-        end = counter*l - binomial_coefficant
-        id_to_delete_list.extend([i for i in range(begin-1, end)])
-        binomial_coefficant = math.comb(
-            temporal_set_size + counter, temporal_set_size)
-        begin = (counter * l) + n - binomial_coefficant + 1
-
-    begin = end + 1
-    end = math.comb(l, temporal_set_size)
-    if (begin <= end):
-      id_to_delete_list.extend([i for i in range(begin-1, end)])
+def delete_tuples(l, n, temporal_set_size):
+    frame_idxs = [i for i in range(1, l+1)]
+    frame_combinations = combinations(frame_idxs, temporal_set_size)
+    cardinality_combs = [comb for comb in frame_combinations]
+    id_to_delete_list = [id for id, t in enumerate(
+        cardinality_combs) if any(x > n for x in t)]
     return id_to_delete_list
 
 def set_to_neginf(mask, map):
@@ -41,7 +26,7 @@ def create_support_mask(tuples_mask, support_n_frames, attention_maps, seq_len =
         for id_s, _ in enumerate(queries):
             n_frames = int(support_n_frames[id_s])
             if n_frames != seq_len:
-                mask = tuples_mask[n_frames-2]
+                mask = tuples_mask[n_frames]
                 set_to_neginf(mask, ams[id_q][id_s])
     return ams
 
