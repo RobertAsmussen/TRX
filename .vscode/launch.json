@@ -26,8 +26,7 @@
         "--save_freq=10000",
         "--img_size=224",
         "--scratch=bc",
-        "--split=3",
-        "--temp_set=2"
+        "--split=3"
       ],
       "console": "integratedTerminal"
     }

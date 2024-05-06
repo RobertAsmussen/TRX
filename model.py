@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from collections import OrderedDict
-from utils import split_first_dim_linear, create_support_mask, tuples_to_delete
+from utils import split_first_dim_linear, create_support_mask, delete_tuples
 import math
 from itertools import combinations 
 
@@ -55,7 +55,7 @@ class TemporalCrossTransformer(nn.Module):
         frame_combinations = combinations(frame_idxs, temporal_set_size)
         self.tuples = [torch.tensor(comb).cuda() for comb in frame_combinations]
         self.tuples_len = len(self.tuples)
-        self.tuples_mask = [torch.tensor(tuples_to_delete(self.args.seq_len, n, temporal_set_size)).cuda() for n in range(self.args.seq_len+1)]
+        self.tuples_mask = [torch.tensor(delete_tuples(self.args.seq_len, n, temporal_set_size)).cuda() for n in range(self.args.seq_len+1)]
     
     def forward(self, support_set, support_labels, queries, support_n_frames, target_n_frames):
         n_queries_tuples = torch.tensor([math.comb(int(p), self.temporal_set_size) for p in target_n_frames]).cuda()
