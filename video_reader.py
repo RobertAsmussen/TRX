@@ -200,7 +200,8 @@ class VideoDataset(torch.utils.data.Dataset):
                     imgs = os.listdir(os.path.join(self.data_dir, class_folder, video_folder))
                     if len(imgs) < self.seq_len:
                         short_videos += 1
-#                        continue            
+                    if len(imgs) < max(self.args.temp_set):
+                        continue            
                     imgs.sort()
                     paths = [os.path.join(self.data_dir, class_folder, video_folder, img) for img in imgs]
                     paths.sort()

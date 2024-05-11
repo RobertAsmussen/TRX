@@ -52,9 +52,9 @@ class TemporalCrossTransformer(nn.Module):
         
         # generate all tuples
         frame_idxs = [i for i in range(self.args.seq_len)]
-        frame_combinations = combinations(frame_idxs, temporal_set_size)
+        frame_combinations = combinations(frame_idxs, self.temporal_set_size)
         self.tuples = [torch.tensor(comb).cuda() for comb in frame_combinations]
-        self.tuples_mask = [torch.tensor(delete_tuples(self.args.seq_len, n, temporal_set_size)).cuda() for n in range(self.args.seq_len+1)]
+        self.tuples_mask = [torch.tensor(delete_tuples(self.args.seq_len, n, self.temporal_set_size)).cuda() for n in range(self.args.seq_len+1)]
         self.tuples_len = len(self.tuples)
     
     def forward(self, support_set, support_labels, queries, support_n_frames, target_n_frames):
@@ -98,11 +98,12 @@ class TemporalCrossTransformer(nn.Module):
                 support_n_frames, 0, self._extract_class_indices(support_labels, c))
             k_bs = class_k.shape[0]
             
-            class_scores_matmul = torch.matmul(mh_queries_ks.unsqueeze(1), class_k.transpose(-2,-1)) / math.sqrt(self.args.trans_linear_out_dim)
-            class_scores_matmul = class_scores_matmul.permute(1,3,0,2)
+            class_scores = torch.matmul(mh_queries_ks.unsqueeze(1), class_k.transpose(-2,-1)) / math.sqrt(self.args.trans_linear_out_dim)
+            class_scores = class_scores.permute(1,3,0,2)
             # Set support set videos smaller then seq_len to neginf
-            support_set_mask = create_support_mask(self.tuples_mask, class_n_frames, class_scores_matmul)
-            class_scores = torch.where(support_set_mask.bool(), torch.tensor(float('-inf')), class_scores_matmul)            # reshape etc. to apply a softmax for each query tuple
+            support_set_mask = create_support_mask(self.tuples_mask, class_n_frames, class_scores)
+            class_scores = torch.where(support_set_mask.bool(), torch.tensor(float('-inf')), class_scores)
+            # reshape etc. to apply a softmax for each query tuple
             class_scores = class_scores.permute(2,3,0,1)
             class_scores = class_scores.reshape(n_queries, self.tuples_len, -1)
             soft_class_scores = []

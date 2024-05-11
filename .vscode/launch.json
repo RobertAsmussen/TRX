@@ -8,8 +8,8 @@
       "program": "${workspaceFolder}/run.py",
       "args": [
         "--dataset=sp",
-        "-lr=0.0001",
-        "--tasks_per_batch=16",
+        "-lr=0.00001",
+        "--tasks_per_batch=8",
         "-c=checkpoint",
         "-i=20010",
         "--way=5",
@@ -18,7 +18,7 @@
         "--test_iters",
         "10000",
         "--num_test_tasks=10000",
-        "--print_freq=16",
+        "--print_freq=8",
         "--seq_len=12",
         "--num_workers=4",
         "--trans_linear_out_dim=1152",
@@ -26,7 +26,10 @@
         "--save_freq=10000",
         "--img_size=224",
         "--scratch=bc",
-        "--split=3"
+        "--split=3",
+        "--temp_set",
+        "2",
+        "3"
       ],
       "console": "integratedTerminal"
     }
