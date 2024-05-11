@@ -61,6 +61,7 @@ def createRandomSplit_fixedTestClass(src_path, number_Train, number_Val, Test_Cl
     for folder in os.listdir(src_path):
         class_list.append(folder)
     
+    class_list = [elem for elem in class_list if " " not in elem]
     test_class_list = [elem for elem in class_list if elem.startswith(Test_Class_Prefix + "_")]
     class_list = [elem for elem in class_list if elem not in test_class_list]
 
@@ -77,7 +78,7 @@ def createRandomSplit_fixedTestClass(src_path, number_Train, number_Val, Test_Cl
 
 
 if __name__ == "__main__":
-    src_directory = "C:\\Users\\roibl\\OneDrive - stud.uni-stuttgart.de\\PythonCode\\Forschungsarbeit\\trx\\video_datasets\\data\\surgicalphasev1_Xx256"
-    dst_directory = "C:\\Users\\roibl\\OneDrive - stud.uni-stuttgart.de\\PythonCode\\Forschungsarbeit\\trx\\video_datasets\\splits\\surgicalphasev1TrainTestlist"
-    train_list, val_list, test_list = createRandomSplit_fixedTestClass(src_directory, 57, 0, "C80")
+    src_directory = "G:\\Meine Ablage\\Studium\\Master\\Forschungsarbeit\\05_Data\\TRX\\video_datasets\\data\\surgicalphasev1_Xx256"
+    dst_directory = "G:\\Meine Ablage\\Studium\\Master\\Forschungsarbeit\\05_Data\\TRX\\video_datasets\\splits\\surgicalphasev1TrainTestlist"
+    train_list, val_list, test_list = createRandomSplit_fixedTestClass(src_directory, 50, 7, "C80")
     CreateSplit(src_directory, dst_directory, train_list, val_list, test_list)
