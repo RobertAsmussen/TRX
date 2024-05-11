@@ -76,9 +76,26 @@ def createRandomSplit_fixedTestClass(src_path, number_Train, number_Val, Test_Cl
     
     return train_class_list, val_class_list, test_class_list
 
+def createSplit_fixedSurgeries(src_path, train_surgeries_prefix, val_surgeries_prefix, test_surgeries_prefix):
+    class_list = []
+    for folder in os.listdir(src_path):
+        class_list.append(folder)
+    
+    class_list = [elem for elem in class_list if " " not in elem]
+
+    test_class_list = [elem for elem in class_list if any(elem.startswith(i + "_") for i in test_surgeries_prefix)]
+    class_list = [elem for elem in class_list if elem not in test_class_list]
+
+    train_class_list = [elem for elem in class_list if any(elem.startswith(i + "_") for i in train_surgeries_prefix)]
+    class_list = [elem for elem in class_list if elem not in train_class_list]
+
+    val_class_list = [elem for elem in class_list if any(elem.startswith(i + "_") for i in val_surgeries_prefix)]
+    class_list = [elem for elem in class_list if elem not in val_class_list]
+    
+    return train_class_list, val_class_list, test_class_list
 
 if __name__ == "__main__":
     src_directory = "G:\\Meine Ablage\\Studium\\Master\\Forschungsarbeit\\05_Data\\TRX\\video_datasets\\data\\surgicalphasev1_Xx256"
     dst_directory = "G:\\Meine Ablage\\Studium\\Master\\Forschungsarbeit\\05_Data\\TRX\\video_datasets\\splits\\surgicalphasev1TrainTestlist"
-    train_list, val_list, test_list = createRandomSplit_fixedTestClass(src_directory, 50, 7, "C80")
+    train_list, val_list, test_list = createSplit_fixedSurgeries(src_directory, ["LH", "CA", "GR", "HC"], ["M2", "HCH"], ["C80"])
     CreateSplit(src_directory, dst_directory, train_list, val_list, test_list)
