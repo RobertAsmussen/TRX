@@ -90,7 +90,7 @@ def delete_tuples(l, n, temporal_set_size):
 class_softmax = torch.nn.Softmax(dim=0)
 class_scores = torch.randn(5, 66, 10)
 target_n_frames = [10,12,8,6,5]
-tuples_mask = [torch.tensor(delete_tuples(12, n, 3)).cuda() for n in range(0, 13)]
+tuples_mask = [torch.tensor(delete_tuples(12, n, 3)).cuda() for n in range(13)]
 
 #for i_q, query in enumerate(class_scores):
 #    n_frames = target_n_frames[i_q]
@@ -101,5 +101,15 @@ tuples_mask = [torch.tensor(delete_tuples(12, n, 3)).cuda() for n in range(0, 13
 #        else:
 #            query = class_softmax(query)
 #            class_scores[i_q][i_t] = query
+
+tensor = torch.randn(3,6,3,6)
+mask_tensor = torch.zeros_like(tensor)
+tuples_mask = [[0,2,5],[1,2],[4]]
+for video_idx, frames_list in enumerate(tuples_mask):
+  for frame_idx in frames_list:
+    mask_tensor[video_idx, frame_idx, :, :] = 1
+
+tensor = torch.where(mask_tensor.bool(), torch.tensor(float('-inf')), tensor)
+permute_tensor = tensor.permute(2,3,0,1)
 
 print("Test Ende")

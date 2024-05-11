@@ -16,16 +16,13 @@ def delete_tuples(l, n, temporal_set_size):
         cardinality_combs) if any(x > n for x in t)]
     return id_to_delete_list
 
-def create_support_mask(tuples_mask, support_n_frames, attention_maps, seq_len = -1):
-    ams = torch.zeros_like(attention_maps, device=attention_maps.device) 
-    for id_q, queries in enumerate(ams):
-        for id_s, _ in enumerate(queries):
-            n_frames = int(support_n_frames[id_s])
-            if n_frames != seq_len:
-                mask = tuples_mask[n_frames]
-                for id in mask:
-                    ams[id_q, id_s, :, id] = float('-inf')
-    return ams
+def create_support_mask(tuples_mask, support_n_frames, attention_maps):
+    mask = torch.zeros_like(attention_maps, device=attention_maps.device) 
+    for video_idx, n_frames in enumerate(support_n_frames):
+        frames_list = tuples_mask[int(n_frames)]
+        for frame_idx in frames_list:
+            mask[video_idx, frame_idx, :, :] = 1
+    return mask
 
 class TestAccuracies:
     """

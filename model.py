@@ -3,7 +3,7 @@ import torch.nn as nn
 from collections import OrderedDict
 from utils import split_first_dim_linear, create_support_mask, delete_tuples
 import math
-from itertools import combinations 
+from itertools import combinations
 
 from torch.autograd import Variable
 
@@ -54,8 +54,8 @@ class TemporalCrossTransformer(nn.Module):
         frame_idxs = [i for i in range(self.args.seq_len)]
         frame_combinations = combinations(frame_idxs, temporal_set_size)
         self.tuples = [torch.tensor(comb).cuda() for comb in frame_combinations]
-        self.tuples_len = len(self.tuples)
         self.tuples_mask = [torch.tensor(delete_tuples(self.args.seq_len, n, temporal_set_size)).cuda() for n in range(self.args.seq_len+1)]
+        self.tuples_len = len(self.tuples)
     
     def forward(self, support_set, support_labels, queries, support_n_frames, target_n_frames):
         n_queries_tuples = torch.tensor([math.comb(int(p), self.temporal_set_size) for p in target_n_frames]).cuda()
@@ -99,11 +99,11 @@ class TemporalCrossTransformer(nn.Module):
             k_bs = class_k.shape[0]
             
             class_scores_matmul = torch.matmul(mh_queries_ks.unsqueeze(1), class_k.transpose(-2,-1)) / math.sqrt(self.args.trans_linear_out_dim)
+            class_scores_matmul = class_scores_matmul.permute(1,3,0,2)
             # Set support set videos smaller then seq_len to neginf
-            support_set_mask = create_support_mask(self.tuples_mask, class_n_frames, class_scores_matmul, self.args.seq_len)
-            class_scores = class_scores_matmul + support_set_mask
-            # reshape etc. to apply a softmax for each query tuple
-            class_scores = class_scores.permute(0,2,1,3)
+            support_set_mask = create_support_mask(self.tuples_mask, class_n_frames, class_scores_matmul)
+            class_scores = torch.where(support_set_mask.bool(), torch.tensor(float('-inf')), class_scores_matmul)            # reshape etc. to apply a softmax for each query tuple
+            class_scores = class_scores.permute(2,3,0,1)
             class_scores = class_scores.reshape(n_queries, self.tuples_len, -1)
             soft_class_scores = []
 
@@ -178,7 +178,7 @@ class CNN_TRX(nn.Module):
         last_layer_idx = -1
         self.resnet = nn.Sequential(*list(resnet.children())[:last_layer_idx])
 
-        self.transformers = nn.ModuleList([TemporalCrossTransformer(args, s) for s in args.temp_set]) 
+        self.transformers = nn.ModuleList([TemporalCrossTransformer(args, s) for s in args.temp_set])
 
     def forward(self, context_images, context_labels, target_images, support_n_frames, target_n_frames):
 
@@ -222,11 +222,11 @@ if __name__ == "__main__":
             self.shot = 3
             self.query_per_class = 1
             self.trans_dropout = 0.1
-            self.seq_len = 4
+            self.seq_len = 6
             self.img_size = 84
             self.method = "resnet18"
             self.num_gpus = 1
-            self.temp_set = [2]
+            self.temp_set = [3]
     args = ArgsObject()
     torch.manual_seed(0)
     
@@ -236,12 +236,14 @@ if __name__ == "__main__":
     support_imgs = torch.rand(args.way * args.shot * args.seq_len,3, args.img_size, args.img_size).to(device)
     target_imgs = torch.rand(args.way * args.query_per_class * args.seq_len ,3, args.img_size, args.img_size).to(device)
     support_labels = torch.tensor([0,1,0,1,0,1]).to(device)
+    support_n_frames = torch.tensor([args.seq_len-1, args.seq_len, args.seq_len, args.seq_len-2, args.seq_len-1, args.seq_len]).to(device)
+    target_n_frames = torch.tensor([args.seq_len, args.seq_len-1]).to(device)
 
     print("Support images input shape: {}".format(support_imgs.shape))
     print("Target images input shape: {}".format(target_imgs.shape))
     print("Support labels input shape: {}".format(support_labels.shape))
 
-    out = model(support_imgs, support_labels, target_imgs)
+    out = model(support_imgs, support_labels, target_imgs, support_n_frames, target_n_frames)
 
     print("TRX returns the distances from each query to each class prototype.  Use these as logits.  Shape: {}".format(out['logits'].shape))
 

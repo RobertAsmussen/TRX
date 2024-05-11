@@ -216,7 +216,7 @@ class Learner:
 
                     if ((iteration + 1) in self.args.test_iters) and (iteration + 1) != total_iterations:
                         accuracy_dict = self.test(session)
-                        print_and_log(self.logfile, 'Task [{}/{}], Test Loss: {:.7f}, Test Confidence: {:.7f}'
+                        print_and_log(self.logfile, 'Task [{}/{}], Test Accuracy: {:.7f}, Test Confidence: {:.7f}'
                                       .format(iteration + 1, total_iterations, accuracy_dict[self.args.dataset]["accuracy"],
                                               accuracy_dict[self.args.dataset]['confidence']))
                         #self.test_accuracies.print(self.logfile, accuracy_dict)
