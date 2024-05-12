@@ -17,6 +17,7 @@
         "--query_per_class=2",
         "--test_iters",
         "10000",
+        "20000",
         "--num_test_tasks=10000",
         "--print_freq=8",
         "--seq_len=12",
