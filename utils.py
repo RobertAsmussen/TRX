@@ -20,7 +20,7 @@ def create_support_mask(tuples_mask, support_n_frames, attention_maps):
     mask = torch.zeros_like(attention_maps, device=attention_maps.device) 
     for video_idx, n_frames in enumerate(support_n_frames):
         frames_list = tuples_mask[int(n_frames)]
-        for frame_idx in frames_list:
+        for _, frame_idx in enumerate(frames_list):
             mask[video_idx, frame_idx, :, :] = 1
     return mask
 

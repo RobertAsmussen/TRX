@@ -8,6 +8,7 @@ from itertools import combinations
 from torch.autograd import Variable
 
 import torchvision.models as models
+from torch.utils.tensorboard import SummaryWriter
 
 NUM_SAMPLES=1
 
@@ -102,7 +103,7 @@ class TemporalCrossTransformer(nn.Module):
             class_scores = class_scores.permute(1,3,0,2)
             # Set support set videos smaller then seq_len to neginf
             support_set_mask = create_support_mask(self.tuples_mask, class_n_frames, class_scores)
-            class_scores = torch.where(support_set_mask.bool(), torch.tensor(float('-inf')), class_scores)
+            class_scores = torch.where(support_set_mask.bool(), float('-inf'), class_scores)
             # reshape etc. to apply a softmax for each query tuple
             class_scores = class_scores.permute(2,3,0,1)
             class_scores = class_scores.reshape(n_queries, self.tuples_len, -1)
@@ -231,6 +232,8 @@ if __name__ == "__main__":
     args = ArgsObject()
     torch.manual_seed(0)
     
+    writer = SummaryWriter("test//run")
+
     device = 'cuda:0'
     model = CNN_TRX(args).to(device)
     
@@ -243,6 +246,8 @@ if __name__ == "__main__":
     print("Support images input shape: {}".format(support_imgs.shape))
     print("Target images input shape: {}".format(target_imgs.shape))
     print("Support labels input shape: {}".format(support_labels.shape))
+    writer.add_graph(model, (support_imgs, support_labels, target_imgs, support_n_frames, target_n_frames), use_strict_trace=False)
+    writer.flush()
 
     out = model(support_imgs, support_labels, target_imgs, support_n_frames, target_n_frames)
 
