@@ -14,13 +14,16 @@
         "-i=20010",
         "--way=5",
         "--shot=5",
-        "--query_per_class=2",
+        "--query_per_class=1",
         "--test_iters",
+        "100",
+        "1000",
+        "5000",
         "10000",
         "20000",
         "--num_test_tasks=10000",
         "--print_freq=8",
-        "--seq_len=12",
+        "--seq_len=17",
         "--num_workers=4",
         "--trans_linear_out_dim=1152",
         "--method=resnet18",
@@ -29,8 +32,7 @@
         "--scratch=bc",
         "--split=4",
         "--temp_set",
-        "2",
-        "3"
+        "2"
       ],
       "console": "integratedTerminal"
     }
