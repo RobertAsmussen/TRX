@@ -14,6 +14,16 @@ import torchvision
 import video_reader
 import random
 
+#############################################
+#setting up seeds
+manualSeed = random.randint(1, 10000)
+print("Random Seed: ", manualSeed)
+np.random.seed(manualSeed)
+random.seed(manualSeed)
+torch.manual_seed(manualSeed)
+torch.cuda.manual_seed(manualSeed)
+torch.cuda.manual_seed_all(manualSeed)
+########################################################
 
 def main():
     learner = Learner()
@@ -29,7 +39,7 @@ class Learner:
         print_and_log(self.logfile, "Options: %s\n" % self.args)
         print_and_log(self.logfile, "Checkpoint Directory: %s\n" % self.checkpoint_dir)
 
-        self.writer = SummaryWriter()
+        self.writer = SummaryWriter(self.checkpoint_dir)
         
         gpu_device = 'cuda'
         self.device = torch.device(gpu_device if torch.cuda.is_available() else 'cpu')
@@ -50,22 +60,11 @@ class Learner:
         self.test_accuracies = TestAccuracies(self.test_set)
         
         self.scheduler = MultiStepLR(self.optimizer, milestones=self.args.sch, gamma=0.1)
-        
+
         self.start_iteration = 0
         if self.args.resume_from_checkpoint:
             self.load_checkpoint()
         self.optimizer.zero_grad()
-
-        self.writer.add_hparams({'dataset': self.args.dataset,
-                                'backbone': self.args.method,
-                                'sequenz length': self.args.seq_len,
-                                'way': self.args.way,
-                                'shot': self.args.shot,
-                                'training iterations': self.args.training_iterations,
-                                'number of tasks to test on': self.args.num_test_tasks,
-                                'tasks per batch': self.args.tasks_per_batch,
-                                'lr': self.args.learning_rate, 
-                                'optimizer': self.args.opt},{} )
 
     def init_model(self):
         model = CNN_TRX(self.args)
@@ -127,7 +126,7 @@ class Learner:
         parser.add_argument('--sch', nargs='+', type=int, help='iters to drop learning rate', default=[1000000])
 
         args = parser.parse_args()
-        
+
         if args.scratch == "bc":
             args.scratch = ""
         elif args.scratch == "bp":
@@ -175,55 +174,69 @@ class Learner:
 
     def run(self):
         config = tf.compat.v1.ConfigProto()
-        config.gpu_options.allow_growth = False
+        config.gpu_options.allow_growth = True
         with tf.compat.v1.Session(config=config) as session:
-                train_accuracies = []
-                losses = []
-                total_iterations = self.args.training_iterations
-                iteration = self.start_iteration
-                for task_dict in self.video_loader:
-                    if iteration >= total_iterations:
-                        break
-                    iteration += 1
-                    torch.set_grad_enabled(True)
-
-                    task_loss, task_accuracy = self.train_task(task_dict)
-                    #print(f"task accuracy: {task_accuracy}")
-                    #print(
-                    #    f"support frames: {task_dict['support_n_frames']}, target frames: {task_dict['target_n_frames']}")
-                    #print(f"Used classes: {task_dict['real_target_labels_names']}")
-
-                    train_accuracies.append(task_accuracy)
-                    losses.append(task_loss)
-
-                    # optimize
-                    if ((iteration + 1) % self.args.tasks_per_batch == 0) or (iteration == (total_iterations - 1)):
-                        self.optimizer.step()
-                        self.optimizer.zero_grad()
+            train_accuracies = []
+            losses = []
+            total_iterations = self.args.training_iterations
+            iteration = self.start_iteration
+            prof = torch.profiler.profile(
+                schedule=torch.profiler.schedule(wait=1, warmup=1, active=3, repeat=1),
+                on_trace_ready=torch.profiler.tensorboard_trace_handler(self.checkpoint_dir),
+                record_shapes=True,
+                with_stack=True)
+            prof.start()
+            for task_dict in self.video_loader:
+                prof.step()
+                if iteration >= total_iterations:
+                    break
+                iteration += 1
+                torch.set_grad_enabled(True)
+                task_loss, task_accuracy = self.train_task(task_dict)
+                #print(f"task accuracy: {task_accuracy}")
+                #print(
+                #    f"support frames: {task_dict['support_n_frames']}, target frames: {task_dict['target_n_frames']}")
+                #print(f"Used classes: {task_dict['real_target_labels_names']}")
+                train_accuracies.append(task_accuracy)
+                losses.append(task_loss)
+                # optimize
+                if ((iteration + 1) % self.args.tasks_per_batch == 0) or (iteration == (total_iterations - 1)):
+                    self.optimizer.step()
+                    self.optimizer.zero_grad()
                     self.scheduler.step()
-                    if (iteration + 1) % self.args.print_freq == 0:
-                        # print training stats
-                        print_and_log(self.logfile, 'Task [{}/{}], Train Loss: {:.7f}, Train Accuracy: {:.7f}, Used Classes: {}'
-                                      .format(iteration + 1, total_iterations, torch.Tensor(losses).mean().item(),
-                                              torch.Tensor(train_accuracies).mean().item(), task_dict['real_target_labels_names']))
-                        self.writer.add_scalar('Loss/train', torch.Tensor(losses).mean().item(), iteration)
-                        self.writer.add_scalar('Accuracy/train', torch.Tensor(train_accuracies).mean().item(), iteration)
-                        train_accuracies = []
-                        losses = []
+                if (iteration + 1) % self.args.print_freq == 0:
+                    # print training stats
+                    print_and_log(self.logfile, 'Task [{}/{}], Train Loss: {:.7f}, Train Accuracy: {:.7f}, Used Classes: {}'
+                                  .format(iteration + 1, total_iterations, torch.Tensor(losses).mean().item(),
+                                          torch.Tensor(train_accuracies).mean().item(), task_dict['real_target_labels_names']))
+                    self.writer.add_scalar('Loss/train', torch.Tensor(losses).mean().item(), iteration)
+                    self.writer.add_scalar('Accuracy/train', torch.Tensor(train_accuracies).mean().item(), iteration)
+                    train_accuracies = []
+                    losses = []
+                    
+                if ((iteration) % self.args.save_freq == 0) and (iteration + 1) != total_iterations:
+                    self.save_checkpoint(iteration + 1)
 
-                    if ((iteration + 1) % self.args.save_freq == 0) and (iteration + 1) != total_iterations:
-                        self.save_checkpoint(iteration + 1)
+                if ((iteration) in self.args.test_iters):
+                    accuracy_dict = self.test(session)
+                    print_and_log(self.logfile, 'Task [{}/{}], Test Accuracy: {:.7f}, Test Confidence: {:.7f}'
+                                  .format(iteration, total_iterations, accuracy_dict[self.args.dataset]["accuracy"],
+                                          accuracy_dict[self.args.dataset]['confidence']))
+                    #self.test_accuracies.print(self.logfile, accuracy_dict)
+            prof.stop()
+            # save the final model
+            torch.save(self.model.state_dict(), self.checkpoint_path_final)
 
-                    if ((iteration + 1) in self.args.test_iters) and (iteration + 1) != total_iterations:
-                        accuracy_dict = self.test(session)
-                        print_and_log(self.logfile, 'Task [{}/{}], Test Accuracy: {:.7f}, Test Confidence: {:.7f}'
-                                      .format(iteration + 1, total_iterations, accuracy_dict[self.args.dataset]["accuracy"],
-                                              accuracy_dict[self.args.dataset]['confidence']))
-                        #self.test_accuracies.print(self.logfile, accuracy_dict)
-
-                # save the final model
-                torch.save(self.model.state_dict(), self.checkpoint_path_final)
-
+            self.writer.add_hparams({'dataset': self.args.dataset,
+                                'backbone': self.args.method,
+                                'sequenz length': self.args.seq_len,
+                                'way': self.args.way,
+                                'shot': self.args.shot,
+                                'training iterations': self.args.training_iterations,
+                                'number of tasks to test on': self.args.num_test_tasks,
+                                'tasks per batch': self.args.tasks_per_batch,
+                                'lr': self.args.learning_rate, 
+                                'optimizer': self.args.opt}, {'train/accuracy': 0.0})
         self.logfile.close()
 
     def train_task(self, task_dict):

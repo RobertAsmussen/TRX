@@ -341,6 +341,8 @@ class VideoDataset(torch.utils.data.Dataset):
             classes = c.get_unique_surgery_classes()
         else:
             classes = c.get_unique_classes()
+        
+        random.seed(index)
         batch_classes = random.sample(classes, self.way)
 
         if self.train:

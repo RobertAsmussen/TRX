@@ -1,0 +1,245 @@
+from functools import partial
+import os
+import tempfile
+import torch
+import numpy as np
+import argparse
+import pickle
+from utils import print_and_log, get_log_files, TestAccuracies, loss, aggregate_accuracy, verify_checkpoint_dir, task_confusion
+from model import CNN_TRX
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Quiet TensorFlow warnings
+import tensorflow as tf
+
+from torch.optim.lr_scheduler import MultiStepLR
+from torch.utils.tensorboard import SummaryWriter
+import torchvision
+import video_reader
+import random
+
+from ray import tune
+from ray import train
+from ray.train import Checkpoint, get_checkpoint
+from ray.tune.schedulers import ASHAScheduler
+import ray.cloudpickle as raypickle
+
+def main(max_iterations=20000, data_dir="G:\\Meine Ablage\\Studium\\Master\\Forschungsarbeit\\05_Data\\TRX\\video_datasets"):
+    config = {
+    	"lr": 0.001, #tune.loguniform(1e-4, 1e-1),
+    	"seq_len": tune.grid_search([n for n in range(8,21)]),
+    	"temp_set": [2], #tune.grid_search([[2],[3],[2,3]]),
+    	"method": tune.grid_search(["resnet18", "resnet34", "resnet50"]),
+    	"dataset": "sp",
+        "tasks_per_batch": 8,
+    	"training_iterations": 2,
+    	"way": 5,#tune.grid_search([n for n in range(2,10)]),
+    	"shot": 5, #tune.grid_search([n for n in range(1,10)]),
+    	"query_per_class": 1, #tune.grid_search([n for n in range(1,5)]),
+    	"query_per_class_test": 1,
+    	"test_iters": [1],
+        "num_test_task": 2,
+    	"num_workers": 0, #tune.grid_search([n for n in range(0,12)]), 
+    	"trans_linear_out_dim": tune.grid_search([1152, 512]),
+    	"Optimizer": "adam",
+    	"trans_dropout": 0.1,
+    	"img_size": 224,
+    	"num_gpus": 1,
+    	"split": 4,
+    }  
+
+    scheduler = ASHAScheduler(
+        metric="val_loss",
+        mode="min",
+        max_t=20000,
+        grace_period=1,
+        reduction_factor=2
+    )
+    
+    result = tune.run(
+        partial(train_cifar, data_dir=data_dir),
+        config=config,
+        num_samples=20,
+        scheduler=scheduler,
+        resources_per_trial={"cpu": 16, "gpu": 1}
+    )
+
+def train_cifar(config, data_dir=None):
+    args = ArgsObject(data_dir, config)
+    gpu_device = 'cuda'
+    device = torch.device(gpu_device if torch.cuda.is_available() else 'cpu')
+    model = init_model(args, device)
+    if config["Optimizer"] == "adam":
+        optimizer = torch.optim.Adam(model.parameters(), lr=config["lr"])
+    elif config["Optimizer"] == "sgd":
+        optimizer = torch.optim.SGD(model.parameters(), lr=config["lr"])
+    
+    checkpoint = get_checkpoint()
+    if checkpoint:
+        with checkpoint.as_directory() as checkpoint_dir:
+            data_path = os.path.join(checkpoint_dir,"data.pkl")
+            with open(data_path, "rb") as fp:
+                checkpoint_state = raypickle.load(fp)
+            start_iteration = checkpoint_state["iteration"]
+            model.load_state_dict(checkpoint_state["net_state_dict"])
+            optimizer.load_state_dict(checkpoint_state["optimizer_state_dict"])
+    else:
+        start_iteration = 0
+
+    video_loader = load_data(args, data_dir)
+
+    tf_config = tf.compat.v1.ConfigProto()
+    tf_config.gpu_options.allow_growth = True
+    with tf.compat.v1.Session(config=tf_config) as session:
+        tasks_per_batch = config["tasks_per_batch"] 
+        test_iters = config["test_iters"]
+        train_accuracies = []
+        losses = []
+        used_train_classes = set()
+        total_iterations = config["training_iterations"]
+        i = start_iteration
+
+        for task_dict in video_loader:
+            if i >= total_iterations:
+                break
+            i += 1
+
+            task_loss, task_accuracy = train_task(task_dict, model, config["tasks_per_batch"], device)
+            used_train_classes.update(task_dict['real_target_labels_names'][0])
+            train_accuracies.append(task_accuracy.detach().cpu().numpy())
+            losses.append(task_loss.detach().cpu().numpy())
+            
+            if (i % tasks_per_batch == 0) or (i == (total_iterations - 1)):
+                optimizer.step()
+                optimizer.zero_grad()
+
+            if (i in test_iters): #and (i + 1) != total_iterations:
+                accuracy, confidence, val_loss, used_val_classes = test(model, video_loader, config["num_test_task"], device)
+
+                with tempfile.TemporaryDirectory() as checkpoint_dir:
+                    checkpoint = Checkpoint.from_directory(checkpoint_dir)
+                    train.report({
+                        "val_accuracy": float(accuracy), "val_loss": float(val_loss), "confidence": float(confidence),
+                        "train_accuracy": np.array(train_accuracies).mean(), 
+                        "train_loss": np.array(losses).mean(),
+                        "used_train_classes": used_train_classes,
+                        "used_val_classes": used_val_classes
+                        },
+                        checkpoint=checkpoint,
+                    )
+                    used_train_classes.clear()
+                    train_accuracies = []
+                    losses = []
+    
+    print("Finished Training")
+            
+
+
+def test(model, video_loader, num_test_task, device):
+    model.eval()
+    with torch.no_grad():
+
+        video_loader.dataset.train = False
+        test_loss = 0
+        accuracies = []
+        used_val_classes = set()
+
+        for i, task_dict in enumerate(video_loader):
+            if i >= num_test_task:
+                break
+
+            used_val_classes.update(task_dict['real_target_labels_names'][0])
+            context_images, target_images, context_labels, target_labels, _, _, support_n_frames ,target_n_frames = prepare_task(task_dict, device)
+            model_dict = model(context_images, context_labels, target_images, support_n_frames, target_n_frames)
+            target_logits = model_dict['logits']
+            accuracy = aggregate_accuracy(target_logits, target_labels)
+            accuracies.append(accuracy.item())
+            test_loss += loss(target_logits, target_labels, device)
+            del target_logits
+
+        accuracy = np.array(accuracies).mean() * 100.0
+        confidence = (196.0 * np.array(accuracies).std()) / np.sqrt(len(accuracies))
+
+        video_loader.dataset.train = True
+    
+    test_loss = test_loss/num_test_task
+    model.train()
+
+    return accuracy, confidence, test_loss, used_val_classes
+
+def train_task(task_dict, model, task_per_batch, device):
+    torch.set_grad_enabled(True)
+    context_images, target_images, context_labels, target_labels, _, _, support_n_frames ,target_n_frames = prepare_task(task_dict, device)
+    model_dict = model(context_images, context_labels, target_images, support_n_frames, target_n_frames)
+    target_logits = model_dict['logits']
+    task_loss = loss(target_logits, target_labels, device) / task_per_batch
+    task_accuracy = aggregate_accuracy(target_logits, target_labels)
+
+    task_loss.backward(retain_graph=False)
+
+    return task_loss, task_accuracy
+
+def prepare_task(task_dict, device, images_to_device = True):
+    context_images, context_labels = task_dict['support_set'][0], task_dict['support_labels'][0]
+    target_images, target_labels = task_dict['target_set'][0], task_dict['target_labels'][0]
+    real_target_labels = task_dict['real_target_labels'][0]
+    batch_class_list = task_dict['batch_class_list'][0]
+    support_n_frames = task_dict['support_n_frames'][0]
+    target_n_frames = task_dict['target_n_frames'][0]
+
+    if images_to_device:
+        context_images = context_images.to(device)
+        target_images = target_images.to(device)
+    context_labels = context_labels.to(device)
+    target_labels = target_labels.type(torch.LongTensor).to(device)
+    support_n_frames = support_n_frames.to(device)
+    target_n_frames = target_n_frames.to(device)
+
+    return context_images, target_images, context_labels, target_labels, real_target_labels, batch_class_list, support_n_frames, target_n_frames
+
+
+def init_model(args, device):
+    model = CNN_TRX(args).to(device)
+    
+    return model
+
+def load_data(args, data_dir):
+    vd = video_reader.VideoDataset(args)
+    video_loader = torch.utils.data.DataLoader(vd, batch_size=1, num_workers=args.num_workers)
+    
+    return video_loader
+
+class ArgsObject(object):
+    def __init__(self, data_dir ,config):
+        self.path = os.path.join(
+            data_dir, "data", "surgicalphasev1_Xx256")
+        self.traintestlist = os.path.join(
+            data_dir, "splits", "surgicalphasev1TrainTestlist") # TODO hier die Pfade noch besser machen
+        self.dataset = config["dataset"]
+        self.split = config["split"]
+        self.way = config["way"]
+        self.shot = config["shot"]
+        self.query_per_class = config["query_per_class"]
+        self.query_per_class_test = config["query_per_class_test"]
+        self.seq_len = config["seq_len"]
+        self.img_size = config["img_size"]
+        self.temp_set = config["temp_set"]
+        self.debug_loader = False
+        if config["method"] == "resnet50":
+            self.trans_linear_in_dim = 2048
+        else:
+            self.trans_linear_in_dim = 512
+        self.trans_linear_out_dim = config["trans_linear_out_dim"]
+
+        self.way = config["way"]
+        self.shot = config["shot"]
+        self.query_per_class = config["query_per_class"]
+        self.trans_dropout = config["trans_dropout"]
+        self.seq_len = config["seq_len"]
+        self.img_size = config["img_size"]
+        self.method = config["method"]
+        self.num_gpus = config["num_gpus"]
+        self.temp_set = config["temp_set"]
+        self.num_workers = config["num_workers"]
+
+if __name__ == "__main__":
+    # You can change the number of GPUs per trial here:
+    main()

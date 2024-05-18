@@ -171,11 +171,11 @@ class CNN_TRX(nn.Module):
         self.args = args
 
         if self.args.method == "resnet18":
-            resnet = models.resnet18(pretrained=True)  
+            resnet = models.resnet18(weights='ResNet18_Weights.DEFAULT')  
         elif self.args.method == "resnet34":
-            resnet = models.resnet34(pretrained=True)
+            resnet = models.resnet34(weights='ResNet34_Weights.DEFAULT')
         elif self.args.method == "resnet50":
-            resnet = models.resnet50(pretrained=True)
+            resnet = models.resnet50(weights='ResNet50_Weights.DEFAULT')
 
         last_layer_idx = -1
         self.resnet = nn.Sequential(*list(resnet.children())[:last_layer_idx])
