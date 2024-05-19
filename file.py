@@ -108,14 +108,14 @@ def createSplit_fixedSurgeries(src_path, train_surgeries_prefix, val_surgeries_p
     return train_class_list, val_class_list, test_class_list
 
 def createDataset(train_txt_path, val_txt_path, test_txt_path, src_path, dst_path):
-    def copy_folders(txt_path, split_name):
+    def copy_folders(txt_path):
         with open(txt_path, 'r') as file:
             lines = file.readlines()
         
         for line in lines:
             relative_path = line.strip()
             src_folder = os.path.join(src_path, relative_path)
-            dst_folder = os.path.join(dst_path, split_name, relative_path)
+            dst_folder = os.path.join(dst_path, relative_path)
             
             # Ensure the destination directory exists
             os.makedirs(os.path.dirname(dst_folder), exist_ok=True)
@@ -128,18 +128,18 @@ def createDataset(train_txt_path, val_txt_path, test_txt_path, src_path, dst_pat
                 print(f"Source folder {src_folder} does not exist")
 
     # Copy folders for each split
-    copy_folders(train_txt_path, 'train')
-    copy_folders(val_txt_path, 'val')
-    copy_folders(test_txt_path, 'test')
+    copy_folders(train_txt_path)
+    copy_folders(val_txt_path)
+    copy_folders(test_txt_path)
 
 if __name__ == "__main__":
     #src_directory = "G:\\Meine Ablage\\Studium\\Master\\Forschungsarbeit\\05_Data\\TRX\\video_datasets\\data\\surgicalphasev1_Xx256"
     #dst_directory = "G:\\Meine Ablage\\Studium\\Master\\Forschungsarbeit\\05_Data\\TRX\\video_datasets\\splits\\surgicalphasev2TrainTestlist"
     #train_list, val_list, test_list = createSplit_fixedSurgeries(src_directory, ["CA"], [], ["C80"])
     #CreateSplit(src_directory, dst_directory, train_list, val_list, test_list, 11, 15)
-    src = "G:\\Meine Ablage\\Studium\\Master\\Forschungsarbeit\\05_Data\\TRX\\video_datasets\\data\\surgicalphasev1_Xx256"
-    dst = "G:\\Meine Ablage\\Studium\\Master\\Forschungsarbeit\\05_Data\\TRX\\video_datasets\\data\\surgicalphasev2_Xx256"
-    train = "G:\\Meine Ablage\\Studium\\Master\\Forschungsarbeit\\05_Data\TRX\\video_datasets\\splits\\surgicalphasev2TrainTestlist\\trainlist01.txt"
-    test = "G:\\Meine Ablage\\Studium\\Master\\Forschungsarbeit\\05_Data\TRX\\video_datasets\\splits\\surgicalphasev2TrainTestlist\\testlist01.txt"
-    val = "G:\\Meine Ablage\\Studium\\Master\\Forschungsarbeit\\05_Data\TRX\\video_datasets\\splits\\surgicalphasev2TrainTestlist\\vallist01.txt"
+    src = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/data/surgicalphasev1_Xx256"
+    dst = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/data/surgicalphasev2_Xx256"
+    train = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/splits/surgicalphasev2TrainTestlist/trainlist01.txt"
+    test = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/splits/surgicalphasev2TrainTestlist/testlist01.txt"
+    val = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/splits/surgicalphasev2TrainTestlist/vallist01.txt"
     createDataset(train, val, test, src, dst)

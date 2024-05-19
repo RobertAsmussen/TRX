@@ -22,28 +22,28 @@ from ray.train import Checkpoint, get_checkpoint
 from ray.tune.schedulers import ASHAScheduler
 import ray.cloudpickle as raypickle
 
-def main(max_iterations=20000, data_dir="G:\\Meine Ablage\\Studium\\Master\\Forschungsarbeit\\05_Data\\TRX\\video_datasets"):
+def main(max_iterations=20000, data_dir="/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets"):
     config = {
     	"lr": 0.001, #tune.loguniform(1e-4, 1e-1),
     	"seq_len": tune.grid_search([n for n in range(8,21)]),
-    	"temp_set": [2], #tune.grid_search([[2],[3],[2,3]]),
+    	"temp_set": tune.grid_search([[2],[3],[2,3]]),
     	"method": tune.grid_search(["resnet18", "resnet34", "resnet50"]),
     	"dataset": "sp",
         "tasks_per_batch": 8,
     	"training_iterations": 2,
-    	"way": 5,#tune.grid_search([n for n in range(2,10)]),
-    	"shot": 5, #tune.grid_search([n for n in range(1,10)]),
-    	"query_per_class": 1, #tune.grid_search([n for n in range(1,5)]),
+    	"way": 5, #tune.grid_search([n for n in range(5,8)]),
+    	"shot": 5, #tune.grid_search([n for n in range(1,11)]),
+    	"query_per_class": tune.grid_search([n for n in range(1,6)]),
     	"query_per_class_test": 1,
     	"test_iters": [1],
         "num_test_task": 2,
-    	"num_workers": 0, #tune.grid_search([n for n in range(0,12)]), 
+    	"num_workers": tune.grid_search([n for n in range(0,13,4)]), 
     	"trans_linear_out_dim": tune.grid_search([1152, 512]),
     	"Optimizer": "adam",
     	"trans_dropout": 0.1,
     	"img_size": 224,
     	"num_gpus": 1,
-    	"split": 4,
+    	"split": 1,
     }  
 
     scheduler = ASHAScheduler(
@@ -59,7 +59,8 @@ def main(max_iterations=20000, data_dir="G:\\Meine Ablage\\Studium\\Master\\Fors
         config=config,
         num_samples=20,
         scheduler=scheduler,
-        resources_per_trial={"cpu": 16, "gpu": 1}
+        resources_per_trial={"cpu": 24, "gpu": 1},
+        storage_path="/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning"
     )
 
 def train_cifar(config, data_dir=None):
@@ -114,7 +115,7 @@ def train_cifar(config, data_dir=None):
             if (i in test_iters): #and (i + 1) != total_iterations:
                 accuracy, confidence, val_loss, used_val_classes = test(model, video_loader, config["num_test_task"], device)
 
-                with tempfile.TemporaryDirectory() as checkpoint_dir:
+                with tempfile.TemporaryDirectory(prefix="", dir="/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/tmp") as checkpoint_dir:
                     checkpoint = Checkpoint.from_directory(checkpoint_dir)
                     train.report({
                         "val_accuracy": float(accuracy), "val_loss": float(val_loss), "confidence": float(confidence),
@@ -210,9 +211,9 @@ def load_data(args, data_dir):
 class ArgsObject(object):
     def __init__(self, data_dir ,config):
         self.path = os.path.join(
-            data_dir, "data", "surgicalphasev1_Xx256")
+            data_dir, "data", "surgicalphasev2_Xx256")
         self.traintestlist = os.path.join(
-            data_dir, "splits", "surgicalphasev1TrainTestlist") # TODO hier die Pfade noch besser machen
+            data_dir, "splits", "surgicalphasev2TrainTestlist") # TODO hier die Pfade noch besser machen
         self.dataset = config["dataset"]
         self.split = config["split"]
         self.way = config["way"]
