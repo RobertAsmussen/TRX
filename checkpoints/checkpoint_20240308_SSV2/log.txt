@@ -1,0 +1,21 @@
+Options: Namespace(dataset='ssv2', learning_rate=0.001, tasks_per_batch=16, checkpoint_dir='checkpoint', test_model_path=None, training_iterations=100020, resume_from_checkpoint=False, way=5, shot=5, query_per_class=5, query_per_class_test=1, test_iters=[75000], num_test_tasks=10000, print_freq=50, seq_len=8, num_workers=0, method='resnet18', trans_linear_out_dim=1152, opt='sgd', trans_dropout=0.1, save_freq=5000, img_size=224, temp_set=[2, 3], scratch='', num_gpus=1, debug_loader=False, split=3, sch=[1000000], trans_linear_in_dim=512, traintestlist='video_datasets\\splits\\somethingsomethingv2TrainTestlist', path='video_datasets\\data\\somethingsomethingv2_256x256q5_7l8.zip')
+
+Checkpoint Directory: checkpoint
+
+Task [50/100020], Train Loss: 19.0608711, Train Accuracy: 0.3142857
+Task [100/100020], Train Loss: 12.3085976, Train Accuracy: 0.3200000
+Task [150/100020], Train Loss: 5.4695473, Train Accuracy: 0.3432000
+Task [200/100020], Train Loss: 2.9211390, Train Accuracy: 0.3112000
+Task [250/100020], Train Loss: 2.5229785, Train Accuracy: 0.3336000
+Task [300/100020], Train Loss: 2.4116087, Train Accuracy: 0.3448000
+Task [350/100020], Train Loss: 2.4023244, Train Accuracy: 0.3544000
+Task [400/100020], Train Loss: 2.3118839, Train Accuracy: 0.3640000
+Task [450/100020], Train Loss: 2.3002570, Train Accuracy: 0.3632000
+Task [500/100020], Train Loss: 2.2556236, Train Accuracy: 0.3904000
+Task [550/100020], Train Loss: 2.2428994, Train Accuracy: 0.4024000
+Task [600/100020], Train Loss: 2.2308755, Train Accuracy: 0.4016000
+Task [650/100020], Train Loss: 2.2156837, Train Accuracy: 0.4040000
+Task [700/100020], Train Loss: 2.2694497, Train Accuracy: 0.3888000
+Task [750/100020], Train Loss: 2.0899107, Train Accuracy: 0.4448000
+Task [800/100020], Train Loss: 2.1698143, Train Accuracy: 0.4296000
+Task [850/100020], Train Loss: 2.1488400, Train Accuracy: 0.4328000
