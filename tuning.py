@@ -23,7 +23,7 @@ from ray.tune.schedulers import ASHAScheduler
 import ray.cloudpickle as raypickle
 
 def main(max_iterations=20000, data_dir="/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets"):
-    config = {
+    config_max = {
     	"lr": 0.001, #tune.loguniform(1e-4, 1e-1),
     	"seq_len": tune.grid_search([n for n in range(8,21)]),
     	"temp_set": tune.grid_search([[2], [2,3]]),
@@ -44,20 +44,43 @@ def main(max_iterations=20000, data_dir="/media/robert/Volume/Forschungsarbeit_R
     	"img_size": 224,
     	"num_gpus": 1,
     	"split": 1,
-    }  
+    }
+
+    config = {
+    	"lr": tune.loguniform(1e-4, 1e-1),
+    	"seq_len": 17,
+    	"temp_set": [2],
+    	"method": "resnet18",
+    	"dataset": "sp",
+        "tasks_per_batch": 1,
+    	"training_iterations": 10000,
+    	"way": 5, #tune.grid_search([n for n in range(5,8)]),
+    	"shot": 5, #tune.grid_search([n for n in range(1,11)]),
+    	"query_per_class": 1,
+    	"query_per_class_test": 1,
+    	"test_iters": [i for i in range(100,10000,100)],
+        "num_test_task": 100,
+    	"num_workers": 12, # tune.grid_search([n for n in range(0,13,4)]), 
+    	"trans_linear_out_dim": 1152,
+    	"Optimizer": "adam",
+    	"trans_dropout": 0.1,
+    	"img_size": 224,
+    	"num_gpus": 1,
+    	"split": 4,
+    }
 
     scheduler = ASHAScheduler(
         metric="val_loss",
         mode="min",
         max_t=20000,
-        grace_period=1,
-        reduction_factor=2
+        grace_period=1000,
+        reduction_factor=4
     )
     
     result = tune.run(
         partial(train_cifar, data_dir=data_dir),
         config=config,
-        num_samples=20,
+        num_samples=1,
         scheduler=scheduler,
         resources_per_trial={"cpu": 24, "gpu": 1},
         storage_path="/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning"
@@ -211,9 +234,9 @@ def load_data(args, data_dir):
 class ArgsObject(object):
     def __init__(self, data_dir ,config):
         self.path = os.path.join(
-            data_dir, "data", "surgicalphasev2_Xx256")
+            data_dir, "data", "surgicalphasev1_Xx256")
         self.traintestlist = os.path.join(
-            data_dir, "splits", "surgicalphasev2TrainTestlist") # TODO hier die Pfade noch besser machen
+            data_dir, "splits", "surgicalphasev1TrainTestlist") # TODO hier die Pfade noch besser machen
         self.dataset = config["dataset"]
         self.split = config["split"]
         self.way = config["way"]
