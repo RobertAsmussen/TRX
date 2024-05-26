@@ -132,3 +132,8 @@ dmypy.json
 video_datasets/data
 # Trained models
 *.pt
+*.pt.trace.json
+# Tuning results
+hyperparameter_Tuning/
+tmp/
+*.zip

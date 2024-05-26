@@ -252,8 +252,3 @@ if __name__ == "__main__":
     out = model(support_imgs, support_labels, target_imgs, support_n_frames, target_n_frames)
 
     print("TRX returns the distances from each query to each class prototype.  Use these as logits.  Shape: {}".format(out['logits'].shape))
-
-
-
-
-
