@@ -26,7 +26,7 @@ def main(max_iterations=20000, data_dir="/media/robert/Volume/Forschungsarbeit_R
     config = {
     	"lr": 0.001, #tune.loguniform(1e-4, 1e-1),
     	"seq_len": tune.grid_search([n for n in range(8,21)]),
-    	"temp_set": tune.grid_search([[2],[3],[2,3]]),
+    	"temp_set": tune.grid_search([[2], [2,3]]),
     	"method": tune.grid_search(["resnet18", "resnet34", "resnet50"]),
     	"dataset": "sp",
         "tasks_per_batch": 8,
@@ -37,7 +37,7 @@ def main(max_iterations=20000, data_dir="/media/robert/Volume/Forschungsarbeit_R
     	"query_per_class_test": 1,
     	"test_iters": [1],
         "num_test_task": 2,
-    	"num_workers": tune.grid_search([n for n in range(0,13,4)]), 
+    	"num_workers":tune.grid_search([0,12]), # tune.grid_search([n for n in range(0,13,4)]), 
     	"trans_linear_out_dim": tune.grid_search([1152, 512]),
     	"Optimizer": "adam",
     	"trans_dropout": 0.1,

@@ -136,3 +136,4 @@ video_datasets/data
 # Tuning results
 hyperparameter_Tuning/
 tmp/
+*.zip
