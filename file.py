@@ -133,13 +133,13 @@ def createDataset(train_txt_path, val_txt_path, test_txt_path, src_path, dst_pat
     copy_folders(test_txt_path)
 
 if __name__ == "__main__":
-    #src_directory = "G:\\Meine Ablage\\Studium\\Master\\Forschungsarbeit\\05_Data\\TRX\\video_datasets\\data\\surgicalphasev1_Xx256"
-    #dst_directory = "G:\\Meine Ablage\\Studium\\Master\\Forschungsarbeit\\05_Data\\TRX\\video_datasets\\splits\\surgicalphasev2TrainTestlist"
-    #train_list, val_list, test_list = createSplit_fixedSurgeries(src_directory, ["CA"], [], ["C80"])
-    #CreateSplit(src_directory, dst_directory, train_list, val_list, test_list, 11, 15)
-    src = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/data/surgicalphasev1_Xx256"
-    dst = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/data/surgicalphasev2_Xx256"
-    train = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/splits/surgicalphasev2TrainTestlist/trainlist01.txt"
-    test = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/splits/surgicalphasev2TrainTestlist/testlist01.txt"
-    val = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/splits/surgicalphasev2TrainTestlist/vallist01.txt"
-    createDataset(train, val, test, src, dst)
+    src_directory = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/data/surgicalphasev1_Xx256"
+    dst_directory = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/splits/surgicalphasev1TrainTestlist"
+    train_list, val_list, test_list = createSplit_fixedSurgeries(src_directory, ["CA","GR", "HC", "LH"], ["HCH", "M2"], ["C80"])
+    CreateSplit(src_directory, dst_directory, train_list, val_list, test_list)
+    #src = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/data/surgicalphasev1_Xx256"
+    #dst = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/data/surgicalphasev2_Xx256"
+    #train = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/splits/surgicalphasev2TrainTestlist/trainlist01.txt"
+    #test = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/splits/surgicalphasev2TrainTestlist/testlist01.txt"
+    #val = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/splits/surgicalphasev2TrainTestlist/vallist01.txt"
+    #createDataset(train, val, test, src, dst)

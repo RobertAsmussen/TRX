@@ -180,14 +180,14 @@ class Learner:
             losses = []
             total_iterations = self.args.training_iterations
             iteration = self.start_iteration
-            prof = torch.profiler.profile(
-                schedule=torch.profiler.schedule(wait=1, warmup=1, active=3, repeat=1),
-                on_trace_ready=torch.profiler.tensorboard_trace_handler(self.checkpoint_dir),
-                record_shapes=True,
-                with_stack=True)
-            prof.start()
+            #prof = torch.profiler.profile(
+            #    schedule=torch.profiler.schedule(wait=1, warmup=1, active=3, repeat=1),
+            #    on_trace_ready=torch.profiler.tensorboard_trace_handler(self.checkpoint_dir),
+            #    record_shapes=True,
+            #    with_stack=True)
+            #prof.start()
             for task_dict in self.video_loader:
-                prof.step()
+             #   prof.step()
                 if iteration >= total_iterations:
                     break
                 iteration += 1
@@ -223,7 +223,7 @@ class Learner:
                                   .format(iteration, total_iterations, accuracy_dict[self.args.dataset]["accuracy"],
                                           accuracy_dict[self.args.dataset]['confidence']))
                     #self.test_accuracies.print(self.logfile, accuracy_dict)
-            prof.stop()
+            #prof.stop()
             # save the final model
             torch.save(self.model.state_dict(), self.checkpoint_path_final)
 

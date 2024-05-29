@@ -22,8 +22,36 @@ from ray.train import Checkpoint, get_checkpoint
 from ray.tune.schedulers import ASHAScheduler
 import ray.cloudpickle as raypickle
 
+def choose_seq_len(method, temp_set, query_per_class):
+    data = [
+        {"method": "resnet18", "temp_set": [2, 3], "query_per_class": 1, "seq_len": 15},
+        {"method": "resnet18", "temp_set": [2, 3], "query_per_class": 2, "seq_len": 13},
+        {"method": "resnet18", "temp_set": [2, 3], "query_per_class": 3, "seq_len": 12},
+        {"method": "resnet18", "temp_set": [2, 3], "query_per_class": 4, "seq_len": 10},
+        {"method": "resnet18", "temp_set": [2, 3], "query_per_class": 5, "seq_len": 9},
+        {"method": "resnet18", "temp_set": [2], "query_per_class": 1, "seq_len": 17},
+        {"method": "resnet18", "temp_set": [2], "query_per_class": 2, "seq_len": 15},
+        {"method": "resnet18", "temp_set": [2], "query_per_class": 3, "seq_len": 13},
+        {"method": "resnet18", "temp_set": [2], "query_per_class": 4, "seq_len": 11},
+        {"method": "resnet18", "temp_set": [2], "query_per_class": 5, "seq_len": 10},
+        {"method": "resnet34", "temp_set": [2, 3], "query_per_class": 1, "seq_len": 11},
+        {"method": "resnet34", "temp_set": [2, 3], "query_per_class": 2, "seq_len": 10},
+        {"method": "resnet34", "temp_set": [2, 3], "query_per_class": 3, "seq_len": 8},
+        {"method": "resnet34", "temp_set": [2], "query_per_class": 1, "seq_len": 12},
+        {"method": "resnet34", "temp_set": [2], "query_per_class": 2, "seq_len": 10},
+        {"method": "resnet34", "temp_set": [2], "query_per_class": 3, "seq_len": 9},
+        {"method": "resnet34", "temp_set": [2], "query_per_class": 4, "seq_len": 8}
+    ]
+    
+    for entry in data:
+        if entry["method"] == method and entry["temp_set"] == temp_set and entry["query_per_class"] == query_per_class:
+            return entry["seq_len"]
+    
+    return None  # or raise an error if no match is found
+    
+
 def main(max_iterations=20000, data_dir="/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets"):
-    config_max = {
+    config_HP1 = {
     	"lr": 0.001, #tune.loguniform(1e-4, 1e-1),
     	"seq_len": tune.grid_search([n for n in range(8,21)]),
     	"temp_set": tune.grid_search([[2], [2,3]]),
@@ -46,17 +74,16 @@ def main(max_iterations=20000, data_dir="/media/robert/Volume/Forschungsarbeit_R
     	"split": 1,
     }
 
-    config = {
-    	"lr": tune.loguniform(1e-4, 1e-1),
-    	"seq_len": 17,
-    	"temp_set": [2],
+    config_HP2 = {
+    	"lr": tune.grid_search([1e-4, 1e-3, 1e-5]),
+    	"temp_set": tune.grid_search([[2],[2,3]]),
     	"method": "resnet18",
     	"dataset": "sp",
         "tasks_per_batch": 1,
-    	"training_iterations": 10000,
+    	"training_iterations": 10002,
     	"way": 5, #tune.grid_search([n for n in range(5,8)]),
     	"shot": 5, #tune.grid_search([n for n in range(1,11)]),
-    	"query_per_class": 1,
+    	"query_per_class": tune.grid_search([n for n in range(1,6)]),
     	"query_per_class_test": 1,
     	"test_iters": [i for i in range(100,10000,100)],
         "num_test_task": 100,
@@ -66,7 +93,7 @@ def main(max_iterations=20000, data_dir="/media/robert/Volume/Forschungsarbeit_R
     	"trans_dropout": 0.1,
     	"img_size": 224,
     	"num_gpus": 1,
-    	"split": 4,
+    	"split": 4
     }
 
     scheduler = ASHAScheduler(
@@ -79,14 +106,25 @@ def main(max_iterations=20000, data_dir="/media/robert/Volume/Forschungsarbeit_R
     
     result = tune.run(
         partial(train_cifar, data_dir=data_dir),
-        config=config,
+        config=config_HP2,
         num_samples=1,
         scheduler=scheduler,
         resources_per_trial={"cpu": 24, "gpu": 1},
         storage_path="/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning"
     )
 
+def preprocess_config(config):
+    if "seq_len" not in config:
+        seq_len = choose_seq_len(
+            method=config["method"],
+            temp_set=config["temp_set"],
+            query_per_class=config["query_per_class"]
+        )
+        config["seq_len"] = seq_len
+    return config
+
 def train_cifar(config, data_dir=None):
+    preprocess_config(config)
     args = ArgsObject(data_dir, config)
     gpu_device = 'cuda'
     device = torch.device(gpu_device if torch.cuda.is_available() else 'cpu')
