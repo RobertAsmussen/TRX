@@ -1,3 +1,5 @@
+C80_Calot_Triangle_Dissection/3
+C80_Calot_Triangle_Dissection/50
 C80_Calot_Triangle_Dissection/1
 C80_Calot_Triangle_Dissection/10
 C80_Calot_Triangle_Dissection/11
@@ -20,7 +22,6 @@ C80_Calot_Triangle_Dissection/26
 C80_Calot_Triangle_Dissection/27
 C80_Calot_Triangle_Dissection/28
 C80_Calot_Triangle_Dissection/29
-C80_Calot_Triangle_Dissection/3
 C80_Calot_Triangle_Dissection/30
 C80_Calot_Triangle_Dissection/31
 C80_Calot_Triangle_Dissection/32
@@ -43,7 +44,6 @@ C80_Calot_Triangle_Dissection/47
 C80_Calot_Triangle_Dissection/48
 C80_Calot_Triangle_Dissection/49
 C80_Calot_Triangle_Dissection/5
-C80_Calot_Triangle_Dissection/50
 C80_Calot_Triangle_Dissection/51
 C80_Calot_Triangle_Dissection/52
 C80_Calot_Triangle_Dissection/53
@@ -78,6 +78,8 @@ C80_Calot_Triangle_Dissection/79
 C80_Calot_Triangle_Dissection/8
 C80_Calot_Triangle_Dissection/80
 C80_Calot_Triangle_Dissection/9
+C80_Cleaning_Coagulation/122
+C80_Cleaning_Coagulation/145
 C80_Cleaning_Coagulation/100
 C80_Cleaning_Coagulation/101
 C80_Cleaning_Coagulation/102
@@ -100,7 +102,6 @@ C80_Cleaning_Coagulation/118
 C80_Cleaning_Coagulation/119
 C80_Cleaning_Coagulation/120
 C80_Cleaning_Coagulation/121
-C80_Cleaning_Coagulation/122
 C80_Cleaning_Coagulation/123
 C80_Cleaning_Coagulation/124
 C80_Cleaning_Coagulation/125
@@ -123,7 +124,6 @@ C80_Cleaning_Coagulation/141
 C80_Cleaning_Coagulation/142
 C80_Cleaning_Coagulation/143
 C80_Cleaning_Coagulation/144
-C80_Cleaning_Coagulation/145
 C80_Cleaning_Coagulation/146
 C80_Cleaning_Coagulation/147
 C80_Cleaning_Coagulation/148
@@ -152,6 +152,8 @@ C80_Cleaning_Coagulation/96
 C80_Cleaning_Coagulation/97
 C80_Cleaning_Coagulation/98
 C80_Cleaning_Coagulation/99
+C80_Clipping_Cutting/177
+C80_Clipping_Cutting/200
 C80_Clipping_Cutting/155
 C80_Clipping_Cutting/156
 C80_Clipping_Cutting/157
@@ -174,7 +176,6 @@ C80_Clipping_Cutting/173
 C80_Clipping_Cutting/174
 C80_Clipping_Cutting/175
 C80_Clipping_Cutting/176
-C80_Clipping_Cutting/177
 C80_Clipping_Cutting/178
 C80_Clipping_Cutting/179
 C80_Clipping_Cutting/180
@@ -197,7 +198,6 @@ C80_Clipping_Cutting/196
 C80_Clipping_Cutting/197
 C80_Clipping_Cutting/198
 C80_Clipping_Cutting/199
-C80_Clipping_Cutting/200
 C80_Clipping_Cutting/201
 C80_Clipping_Cutting/202
 C80_Clipping_Cutting/203
@@ -232,6 +232,8 @@ C80_Clipping_Cutting/231
 C80_Clipping_Cutting/232
 C80_Clipping_Cutting/233
 C80_Clipping_Cutting/234
+C80_Gallbladder_Dissection/257
+C80_Gallbladder_Dissection/280
 C80_Gallbladder_Dissection/235
 C80_Gallbladder_Dissection/236
 C80_Gallbladder_Dissection/237
@@ -254,7 +256,6 @@ C80_Gallbladder_Dissection/253
 C80_Gallbladder_Dissection/254
 C80_Gallbladder_Dissection/255
 C80_Gallbladder_Dissection/256
-C80_Gallbladder_Dissection/257
 C80_Gallbladder_Dissection/258
 C80_Gallbladder_Dissection/259
 C80_Gallbladder_Dissection/260
@@ -277,7 +278,6 @@ C80_Gallbladder_Dissection/276
 C80_Gallbladder_Dissection/277
 C80_Gallbladder_Dissection/278
 C80_Gallbladder_Dissection/279
-C80_Gallbladder_Dissection/280
 C80_Gallbladder_Dissection/281
 C80_Gallbladder_Dissection/282
 C80_Gallbladder_Dissection/283
@@ -312,6 +312,8 @@ C80_Gallbladder_Dissection/311
 C80_Gallbladder_Dissection/312
 C80_Gallbladder_Dissection/313
 C80_Gallbladder_Dissection/314
+C80_Gallbladder_Packaging/337
+C80_Gallbladder_Packaging/360
 C80_Gallbladder_Packaging/315
 C80_Gallbladder_Packaging/316
 C80_Gallbladder_Packaging/317
@@ -334,7 +336,6 @@ C80_Gallbladder_Packaging/333
 C80_Gallbladder_Packaging/334
 C80_Gallbladder_Packaging/335
 C80_Gallbladder_Packaging/336
-C80_Gallbladder_Packaging/337
 C80_Gallbladder_Packaging/338
 C80_Gallbladder_Packaging/339
 C80_Gallbladder_Packaging/340
@@ -357,7 +358,6 @@ C80_Gallbladder_Packaging/356
 C80_Gallbladder_Packaging/357
 C80_Gallbladder_Packaging/358
 C80_Gallbladder_Packaging/359
-C80_Gallbladder_Packaging/360
 C80_Gallbladder_Packaging/361
 C80_Gallbladder_Packaging/362
 C80_Gallbladder_Packaging/363
@@ -392,6 +392,8 @@ C80_Gallbladder_Packaging/391
 C80_Gallbladder_Packaging/392
 C80_Gallbladder_Packaging/393
 C80_Gallbladder_Packaging/394
+C80_Gallbladder_Retraction/417
+C80_Gallbladder_Retraction/440
 C80_Gallbladder_Retraction/395
 C80_Gallbladder_Retraction/396
 C80_Gallbladder_Retraction/397
@@ -414,7 +416,6 @@ C80_Gallbladder_Retraction/413
 C80_Gallbladder_Retraction/414
 C80_Gallbladder_Retraction/415
 C80_Gallbladder_Retraction/416
-C80_Gallbladder_Retraction/417
 C80_Gallbladder_Retraction/418
 C80_Gallbladder_Retraction/419
 C80_Gallbladder_Retraction/420
@@ -437,7 +438,6 @@ C80_Gallbladder_Retraction/436
 C80_Gallbladder_Retraction/437
 C80_Gallbladder_Retraction/438
 C80_Gallbladder_Retraction/439
-C80_Gallbladder_Retraction/440
 C80_Gallbladder_Retraction/441
 C80_Gallbladder_Retraction/442
 C80_Gallbladder_Retraction/443
@@ -472,6 +472,8 @@ C80_Gallbladder_Retraction/471
 C80_Gallbladder_Retraction/472
 C80_Gallbladder_Retraction/473
 C80_Gallbladder_Retraction/474
+C80_Preparation/497
+C80_Preparation/520
 C80_Preparation/475
 C80_Preparation/476
 C80_Preparation/477
@@ -494,7 +496,6 @@ C80_Preparation/493
 C80_Preparation/494
 C80_Preparation/495
 C80_Preparation/496
-C80_Preparation/497
 C80_Preparation/498
 C80_Preparation/499
 C80_Preparation/500
@@ -517,7 +518,6 @@ C80_Preparation/516
 C80_Preparation/517
 C80_Preparation/518
 C80_Preparation/519
-C80_Preparation/520
 C80_Preparation/521
 C80_Preparation/522
 C80_Preparation/523
