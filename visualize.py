@@ -5,7 +5,8 @@ import shutil
 import re
 from collections import defaultdict
 
-def read_save_sort_raytune_data(results_dir = "C:\\Users\\roibl\\Downloads\\hyperparameter_Tuning\\train_cifar_2024-05-19_13-20-47"):
+def read_save_sort_raytune_data(results_dir="C:\\Users\\roibl\\Downloads\\hyperparameter_Tuning\\train_cifar_2024-05-19_13-20-47",
+                                destination_dir="C:\\Users\\roibl\\Downloads\\hyperparameter_Tuning\\copied_logs"):
 
     # Load the analysis object
     analysis = ExperimentAnalysis(results_dir)
@@ -13,31 +14,49 @@ def read_save_sort_raytune_data(results_dir = "C:\\Users\\roibl\\Downloads\\hype
     # Retrieve all trial dataframes
     df = analysis.dataframe()
 
-    config_columns = [col for col in df.columns if col.startswith('config/')]
+    config_columns = [col for col in df.columns if col.startswith('config/') or col.startswith('logdir')]
 
-    # Erstelle ein neues DataFrame mit den gefilterten Spalten
+    # Create a new DataFrame with the filtered columns
     config_df = df[config_columns]
 
-    # Umbenennen der Spalten für einfacheren Zugriff
-    config_df.columns = [col.split('/')[-1] for col in config_df.columns]
+    # Ensure 'method' and 'temp_set' are strings, convert if necessary
+    config_df['config/method'] = config_df['config/method'].astype(str)
+    config_df['config/temp_set'] = config_df['config/temp_set'].astype(str)
 
-    # Finde die maximale seq_len für jede Methode
-    config_df['max_seq_len'] = config_df.groupby('method')['seq_len'].transform('max')
+    # Get the index of the rows with the maximum seq_len for each group
+    idx = config_df.groupby(['config/method', 'config/temp_set', 'config/query_per_class'])['config/seq_len'].idxmax()
 
-    # Filtere das DataFrame, um nur die Zeilen mit der maximalen seq_len zu behalten
-    max_seq_len_df = config_df[config_df['seq_len'] == config_df['max_seq_len']]
+    # Select the rows with the maximum seq_len
+    max_seq_len_df = config_df.loc[idx]
 
-    # Entferne die Hilfsspalte 'max_seq_len'
-    max_seq_len_df = max_seq_len_df.drop(columns=['max_seq_len'])
+    # Ensure there are no duplicate entries
+    # Drop duplicates by selecting relevant columns and avoiding unhashable types
+    max_seq_len_df = max_seq_len_df.drop_duplicates(subset=['config/method', 'config/temp_set', 'config/query_per_class', 'config/seq_len', 'logdir'])
 
-    # Sortiere das DataFrame nach der Spalte 'method'
-    max_seq_len_df = max_seq_len_df.sort_values(by='method')
+    # Sort the DataFrame by the 'method' column
+    max_seq_len_df = max_seq_len_df.sort_values(by=['config/method', 'config/temp_set'])
 
-    # Ergebnis anzeigen
+    # Display the result
     print(max_seq_len_df)
 
     # Optionally, save the successful trials to a CSV file
     max_seq_len_df.to_csv("successful_trials.csv", index=False)
+
+    # Copy the directories listed in the 'logdir' column to the destination directory
+    if not os.path.exists(destination_dir):
+        os.makedirs(destination_dir)
+
+    for log_id in max_seq_len_df['logdir']:
+        # Find the full directory name based on the log_id
+        full_logdir = None
+        for dir_name in os.listdir(results_dir):
+            if log_id in dir_name:
+                full_logdir = os.path.join(results_dir, dir_name)
+                break
+
+        if full_logdir and os.path.isdir(full_logdir):
+            destination_path = os.path.join(destination_dir, os.path.basename(full_logdir))
+            shutil.copytree(full_logdir, destination_path)
     #
     ## Access the best trial based on a specific metric
     #best_trial = analysis.get_best_trial(metric="val_loss", mode="min", scope="all")
@@ -82,4 +101,4 @@ def remove_duplicate_runs(directory):
     print(f"Number of runs: {len(folders.items())}, deleted_folders: {count_deleted_folders}")
 
 if __name__ == "__main__":
-    remove_duplicate_runs("C:\\Users\\roibl\\Downloads\\hyperparameter_Tuning\\train_cifar_2024-05-19_13-20-47")
+    read_save_sort_raytune_data()

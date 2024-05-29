@@ -135,5 +135,7 @@ video_datasets/data
 *.pt.trace.json
 # Tuning results
 hyperparameter_Tuning/
+hyperparameter_Tuning1/
+hyperparameter_Tuning2/
 tmp/
 *.zip
