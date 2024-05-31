@@ -13,6 +13,15 @@ from glob import glob
 from videotransforms.video_transforms import Compose, Resize, RandomCrop, RandomRotation, ColorJitter, RandomHorizontalFlip, CenterCrop, TenCrop
 from videotransforms.volume_transforms import ClipToTensor
 
+def count_files_in_directory(directory):
+    """
+    Count the number of files in a directory.
+    """
+    count = 0
+    for _, _, files in os.walk(directory):
+        count += len(files)
+    return count
+
 """Contains video frame paths and ground truth labels for a single split (e.g. train videos). """
 class Split():
     def __init__(self):
@@ -188,9 +197,11 @@ class VideoDataset(torch.utils.data.Dataset):
             self.class_folders = class_folders
             self.surgeries = surgeries
             for class_folder in class_folders:
-
                 video_folders = os.listdir(os.path.join(self.data_dir, class_folder))
+                if count_files_in_directory(video_folder) < self.args.shot + max(self.args.query_per_class, self.args.query_per_class_test):
+                    continue
                 video_folders.sort()
+                
                 if self.args.debug_loader:
                     video_folders = video_folders[0:1]
                 for video_folder in video_folders:
