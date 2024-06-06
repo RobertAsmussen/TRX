@@ -22,16 +22,16 @@ from ray.train import Checkpoint, get_checkpoint
 from ray.tune.schedulers import ASHAScheduler
 import ray.cloudpickle as raypickle
 
-#############################################
+seed = 2
+
 #setting up seeds
-manualSeed = 2
-print("Random Seed: ", manualSeed)
-np.random.seed(manualSeed)
-random.seed(manualSeed)
-torch.manual_seed(manualSeed)
-torch.cuda.manual_seed(manualSeed)
-torch.cuda.manual_seed_all(manualSeed)
-########################################################
+def set_random_seed(manualSeed):
+    print("Random Seed: ", manualSeed)
+    np.random.seed(manualSeed)
+    random.seed(manualSeed)
+    torch.manual_seed(manualSeed)
+    torch.cuda.manual_seed(manualSeed)
+    torch.cuda.manual_seed_all(manualSeed)
 
 def choose_seq_len(method, temp_set, query_per_class):
     data = [
@@ -88,7 +88,7 @@ def main(max_iterations=20000, data_dir="/media/robert/Volume/Forschungsarbeit_R
 
     config_HP2_R18_fail = {
     	"lr": tune.grid_search([1e-3, 1e-4, 1e-5]),
-    	"temp_set":([2,3]),#tune.grid_search([[2,3], [2]]),
+    	"temp_set":("2,3"),#tune.grid_search(["2,3", "2"]),,
     	"method": "resnet18",
     	"dataset": "sp",
         "tasks_per_batch": 1,
@@ -144,10 +144,12 @@ def main(max_iterations=20000, data_dir="/media/robert/Volume/Forschungsarbeit_R
         num_samples=1,
         scheduler=scheduler,
         resources_per_trial={"cpu": 24, "gpu": 1},
-        storage_path="/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2"
+        storage_path="/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2",
     )
 
 def preprocess_config(config):
+    temp_set = str.split(config["temp_set"], ",")
+    config["temp_set"] = [int(t) for t in temp_set]
     if "seq_len" not in config:
         seq_len = choose_seq_len(
             method=config["method"],
@@ -158,6 +160,7 @@ def preprocess_config(config):
     return config
 
 def train_cifar(config, data_dir=None):
+    set_random_seed(seed)
     preprocess_config(config)
     args = ArgsObject(data_dir, config)
     gpu_device = 'cuda'
@@ -191,6 +194,7 @@ def train_cifar(config, data_dir=None):
         losses = []
         used_train_classes = set()
         total_iterations = config["training_iterations"]
+        best_models = {}
         i = start_iteration
 
         for task_dict in video_loader:
@@ -211,6 +215,22 @@ def train_cifar(config, data_dir=None):
                 accuracy, confidence, val_loss, used_val_classes = test(model, video_loader, config["num_test_task"], device)
 
                 with tempfile.TemporaryDirectory(prefix="", dir="/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/tmp") as checkpoint_dir:
+                    # check if model has top 5 performance : yes -> save it
+                    if len(best_models) < 5 or accuracy > min(best_models.values()):
+                        checkpoint_data = {
+                            "iteration": i,
+                            "net_state_dict": model.state_dict(),
+                            "optimizer_state_dict": optimizer.state_dict(),
+                        }
+                        data_path = os.path.join(checkpoint_dir, "data.pkl")
+                        with open(data_path, "wb") as fp:
+                            pickle.dump(checkpoint_data, fp)
+                        # Update the best models dictionary
+                        if len(best_models) >= 5:
+                            worst_model = min(best_models, key=best_models.get)
+                            del best_models[worst_model]
+                        best_models[checkpoint_dir] = accuracy
+                    
                     checkpoint = Checkpoint.from_directory(checkpoint_dir)
                     train.report({
                         "val_accuracy": float(accuracy), "val_loss": float(val_loss), "confidence": float(confidence),
