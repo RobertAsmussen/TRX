@@ -198,7 +198,7 @@ class VideoDataset(torch.utils.data.Dataset):
             self.surgeries = surgeries
             for class_folder in class_folders:
                 video_folders = os.listdir(os.path.join(self.data_dir, class_folder))
-                if count_files_in_directory(video_folder) < self.args.shot + max(self.args.query_per_class, self.args.query_per_class_test):
+                if len(video_folders) < self.args.shot + max(self.args.query_per_class, self.args.query_per_class_test):
                     continue
                 video_folders.sort()
                 
@@ -353,7 +353,6 @@ class VideoDataset(torch.utils.data.Dataset):
         else:
             classes = c.get_unique_classes()
         
-        random.seed(index)
         batch_classes = random.sample(classes, self.way)
 
         if self.train:
