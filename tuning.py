@@ -355,7 +355,7 @@ def load_data(args, data_dir):
     return video_loader
 
 class ArgsObject(object):
-    def __init__(self, data_dir ,config):
+    def __init__(self, data_dir, config):
         self.path = os.path.join(
             data_dir, "data", "surgicalphasev1_Xx256")
         self.traintestlist = os.path.join(

@@ -1,7 +1,10 @@
-#import torch
-#from torch.nn.utils.rnn import pad_sequence
-#import math
-#from itertools import combinations
+import torch
+import torch.nn as nn
+import torchvision.models as models
+from torch.nn.utils.rnn import pad_sequence
+import math
+from itertools import combinations
+from model import CNN_TRX
 
 ## Example data
 ## Video 1 with 10 frames, each frame represented by a 512-dimensional vector
@@ -114,11 +117,6 @@
 #
 #print("Test Ende")
 
-import torch
-import torch.nn as nn
-import torchvision.models as models
-from model import CNN_TRX
-
 def calculate_model_memory(model, input_tensors):
     # Initialize global variable to count activations
     global nb_acts
@@ -161,8 +159,7 @@ def calculate_model_memory(model, input_tensors):
         'total_memory_gb': total_memory_gb
     }
 
-# Example usage:
-if __name__ == "__main__":
+def create_example_model_and_data():
     class ArgsObject(object):
         def __init__(self):
             self.trans_linear_in_dim = 512
@@ -197,3 +194,35 @@ if __name__ == "__main__":
         memory_info['input_elements'], memory_info['parameter_elements'], memory_info['forward_activations']))
     print('Input memory: {:.4f} GB, Parameter memory: {:.4f} GB, Activation memory: {:.4f} GB, Total memory: {:.4f} GB'.format(
         memory_info['input_memory_gb'], memory_info['parameter_memory_gb'], memory_info['activation_memory_gb'], memory_info['total_memory_gb']))
+
+    return model, support_imgs, support_labels, target_imgs, support_n_frames, target_n_frames
+
+def lookahead_mask(shape):
+    # Mask out future entries by marking them with a 1.0
+    mask = torch.triu(torch.ones(shape, shape), diagonal=1)
+ 
+    return mask
+
+def padding_mask(input):
+    # Create mask which marks the zero padding values in the input by a 1.0
+    mask = torch.eq(input, 0).float()
+
+    # The shape of the mask should be broadcastable to the shape
+    # of the attention weights that it will be masking later on
+    return mask.unsqueeze(0).unsqueeze(1)
+
+
+# Example usage:
+if __name__ == "__main__":
+    s_input = torch.tensor([0,1,1,1,1,0,0,0,0])
+    q_input = torch.tensor([0,1,1,1,1,0,0,1,1])
+    print(f"s_input: {s_input}")
+    print(f"q_input: {q_input}")
+    
+    s_pad = padding_mask(s_input)
+    q_pad = padding_mask(q_input)
+    s_in_lookahead = lookahead_mask(s_input.shape[0])
+    print(f"lookahead: {s_in_lookahead}")
+    print(f"q_pad: {q_pad}")
+    print(f"s_pad: {s_pad}")
+    print(f"Combined: {torch.max(s_pad, s_in_lookahead)}")
