@@ -16,6 +16,7 @@ import torchvision
 import video_reader
 import random
 
+from ray.tune import Tuner
 from ray import tune
 from ray import train
 from ray.train import Checkpoint, get_checkpoint
@@ -63,72 +64,72 @@ def choose_seq_len(method, temp_set, query_per_class):
     
 
 def main(max_iterations=20000, data_dir="/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets"):
-    config_HP1 = {
+    test_config = {
     	"lr": 0.001, #tune.loguniform(1e-4, 1e-1),
-    	"seq_len": tune.grid_search([n for n in range(8,21)]),
-    	"temp_set": tune.grid_search(["2,3", "2"]),
-    	"method": tune.grid_search(["resnet18", "resnet34", "resnet50"]),
+    	"seq_len": 7,    	
+        "temp_set": "2,3",
+    	"method": "resnet18",
     	"dataset": "sp",
         "tasks_per_batch": 8,
-    	"training_iterations": 2,
+    	"training_iterations": 20,
+    	"way": 5, #tune.grid_search([n for n in range(5,8)]),
+    	"shot": 5, #tune.grid_search([n for n in range(1,11)]),
+    	"query_per_class": 1,
+    	"query_per_class_test": 1,
+    	"test_iters": [1,2,3,4,5,10],
+        "num_test_task": 2,
+    	"num_workers":10, # tune.grid_search([n for n in range(0,13,4)]), 
+    	"trans_linear_out_dim": 1152,
+    	"Optimizer": "adam",
+    	"trans_dropout": 0.1,
+    	"img_size": 224,
+    	"num_gpus": 1,
+    	"split": 5,
+    }
+
+    config_HP2_R18 = {
+    	"lr": tune.grid_search([1e-3, 1e-4, 1e-5]),
+    	"temp_set": tune.grid_search([ "2", "2,3"]),
+    	"method": "resnet18",
+    	"dataset": "sp",
+        "tasks_per_batch": 1,
+    	"training_iterations": 10002,
     	"way": 5, #tune.grid_search([n for n in range(5,8)]),
     	"shot": 5, #tune.grid_search([n for n in range(1,11)]),
     	"query_per_class": tune.grid_search([n for n in range(1,6)]),
     	"query_per_class_test": 1,
-    	"test_iters": [1],
-        "num_test_task": 2,
-    	"num_workers":tune.grid_search([0,12]), # tune.grid_search([n for n in range(0,13,4)]), 
-    	"trans_linear_out_dim": tune.grid_search([1152, 512]),
-    	"Optimizer": "adam",
-    	"trans_dropout": 0.1,
-    	"img_size": 224,
-    	"num_gpus": 1,
-    	"split": 1,
-    }
-
-    config_HP2_R18_fail = {
-    	"lr": tune.grid_search([1e-3, 1e-4, 1e-5]),
-    	"temp_set":("2,3"),#tune.grid_search(["2,3", "2"]),,
-    	"method": "resnet18",
-    	"dataset": "sp",
-        "tasks_per_batch": 1,
-    	"training_iterations": 10002,
-    	"way": 5, #tune.grid_search([n for n in range(5,8)]),
-    	"shot": 5, #tune.grid_search([n for n in range(1,11)]),
-    	"query_per_class": tune.grid_search([n for n in range(1,4)]),
-    	"query_per_class_test": 1,
     	"test_iters": [i for i in range(100,10002,100)],
         "num_test_task": 100,
-    	"num_workers": 12, # tune.grid_search([n for n in range(0,13,4)]), 
+    	"num_workers": 10, # tune.grid_search([n for n in range(0,13,4)]), 
     	"trans_linear_out_dim": 1152,
     	"Optimizer": "adam",
     	"trans_dropout": 0.1,
     	"img_size": 224,
     	"num_gpus": 1,
-    	"split": 5
+    	"split": 6
     }
 
-    config_HP2 = {
+    config_HP2_R34 = {
     	"lr": tune.grid_search([1e-3, 1e-4, 1e-5]),
-    	"temp_set": tune.grid_search(["2,3", "2"]),
-    	"method": "resnet18",
+    	"temp_set": tune.grid_search([ "2", "2,3"]),
+    	"method": "resnet34",
     	"dataset": "sp",
         "tasks_per_batch": 1,
     	"training_iterations": 10002,
     	"way": 5, #tune.grid_search([n for n in range(5,8)]),
     	"shot": 5, #tune.grid_search([n for n in range(1,11)]),
-    	"query_per_class": tune.grid_search([n for n in range(1,4)]),
+    	"query_per_class": tune.grid_search([n for n in range(1,5)]),
     	"query_per_class_test": 1,
     	"test_iters": [i for i in range(100,10002,100)],
         "num_test_task": 100,
-    	"num_workers": 12, # tune.grid_search([n for n in range(0,13,4)]), 
+    	"num_workers": 10, # tune.grid_search([n for n in range(0,13,4)]), 
     	"trans_linear_out_dim": 1152,
     	"Optimizer": "adam",
     	"trans_dropout": 0.1,
     	"img_size": 224,
     	"num_gpus": 1,
-    	"split": 5
-    }   
+    	"split": 6
+    }
 
     scheduler = ASHAScheduler(
         metric="val_loss",
@@ -137,14 +138,34 @@ def main(max_iterations=20000, data_dir="/media/robert/Volume/Forschungsarbeit_R
         grace_period=1000,
         reduction_factor=4
     )
-    
+    tuner = tune.Tuner(
+        tune.with_resources(
+            tune.with_parameters(partial(train_cifar, data_dir=data_dir)),
+            resources={"cpu": 24, "gpu": 1},
+        ),
+        tune_config=tune.TuneConfig(
+            scheduler=scheduler,
+            num_samples=1
+        ),
+        run_config=train.RunConfig(
+            storage_path="/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2",
+            checkpoint_config=train.CheckpointConfig(num_to_keep=5,checkpoint_score_attribute="val_accuracy"),
+        ),
+        param_space=config_HP2_R34
+    )
+    results = tuner.fit()
+
+    return
+
     result = tune.run(
         partial(train_cifar, data_dir=data_dir),
-        config=config_HP2_R18_fail,
+        config=config_HP2_R34_fail,
         num_samples=1,
         scheduler=scheduler,
         resources_per_trial={"cpu": 24, "gpu": 1},
         storage_path="/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2",
+        keep_checkpoints_num=5,
+        checkpoint_score_attr="val_accuracy"
     )
 
 def preprocess_config(config):
@@ -194,7 +215,9 @@ def train_cifar(config, data_dir=None):
         losses = []
         used_train_classes = set()
         total_iterations = config["training_iterations"]
-        best_models = {}
+        best_accuracy = 0
+        best_it = 0
+        lowest_val_loss = 1000
         i = start_iteration
 
         for task_dict in video_loader:
@@ -213,25 +236,32 @@ def train_cifar(config, data_dir=None):
 
             if (i in test_iters): #and (i + 1) != total_iterations:
                 accuracy, confidence, val_loss, used_val_classes = test(model, video_loader, config["num_test_task"], device)
+                if accuracy >= best_accuracy:
+                    best_accuracy = accuracy
+                    best_it = i
+                    lowest_val_loss = val_loss
 
                 with tempfile.TemporaryDirectory(prefix="", dir="/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/tmp") as checkpoint_dir:
-                    # check if model has top 5 performance : yes -> save it
-                    if len(best_models) < 5 or accuracy > min(best_models.values()):
-                        checkpoint_data = {
-                            "iteration": i,
-                            "net_state_dict": model.state_dict(),
-                            "optimizer_state_dict": optimizer.state_dict(),
-                        }
-                        data_path = os.path.join(checkpoint_dir, "data.pkl")
-                        with open(data_path, "wb") as fp:
-                            pickle.dump(checkpoint_data, fp)
-                        # Update the best models dictionary
-                        if len(best_models) >= 5:
-                            worst_model = min(best_models, key=best_models.get)
-                            del best_models[worst_model]
-                        best_models[checkpoint_dir] = accuracy
-                    
                     checkpoint = Checkpoint.from_directory(checkpoint_dir)
+                    # check if model has top 5 performance : yes -> save it
+                    #if len(best_models) < 5 or accuracy > min(best_models.values()):
+                    checkpoint_data = {
+                        "iteration": i,
+                        "net_state_dict": model.state_dict(),
+                        "optimizer_state_dict": optimizer.state_dict(),
+                    }
+                    data_path = os.path.join(checkpoint_dir, "data.pkl")
+                    with open(data_path, "wb") as fp:
+                        pickle.dump(checkpoint_data, fp)
+                        # Update the best models dictionary
+                        #if len(best_models) >= 5:
+                        #    worst_model = min(best_models, key=best_models.get)
+                        #    worst_model_path = worst_model
+                        #    os.remove(worst_model_path)
+                        #    del best_models[worst_model]
+#
+                        #best_models[data_path] = accuracy
+                    
                     train.report({
                         "val_accuracy": float(accuracy), "val_loss": float(val_loss), "confidence": float(confidence),
                         "train_accuracy": np.array(train_accuracies).mean(), 
@@ -245,6 +275,7 @@ def train_cifar(config, data_dir=None):
                     train_accuracies = []
                     losses = []
     
+    train.report({"val_accuracy": float(best_accuracy), "val_loss": float(lowest_val_loss), "it_high_val_acc": best_it})
     print("Finished Training")
             
 
