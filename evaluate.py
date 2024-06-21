@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 import torch
+from torch.optim.lr_scheduler import MultiStepLR
 import numpy as np
 import argparse
 import pickle
@@ -34,6 +35,64 @@ class CorrectedSummaryWriter(SummaryWriter):
 
 seed = 2
 
+def train(model, video_loader, optimizer, scheduler, writer, args, device):
+    model.train()
+    tasks_per_batch = args.tasks_per_batch
+    total_iterations = args.training_iterations
+    used_train_classes = set()
+    train_accuracies = []
+    train_losses = []
+    it = 0
+
+    for task_dict in video_loader:
+        torch.set_grad_enabled(True)
+        if it >= total_iterations:
+            break
+        it += 1
+
+        task_loss, task_accuracy = train_task(model, task_dict, tasks_per_batch, device)
+        used_train_classes.update(task_dict['real_target_labels_names'][0])
+        train_accuracies.append(task_accuracy.detach().cpu().numpy())
+        train_losses.append(task_loss.detach().cpu().numpy())
+
+        # optimize
+        if ((it + 1) % args.tasks_per_batch == 0) or (it == (total_iterations - 1)):
+            optimizer.step()
+            optimizer.zero_grad()
+            scheduler.step()
+            
+            # log to tensorboard
+            writer.add_scalar('train/accuracy', torch.Tensor(train_accuracies).mean().item(), it)
+            writer.add_scalar('train/loss', torch.Tensor(train_losses).mean().item(), it)
+            train_accuracies = []
+            train_losses = []
+
+    checkpoint_data = {
+        "iteration": it,
+        "net_state_dict": model.state_dict(),
+        "optimizer_state_dict": optimizer.state_dict(),
+        "scheduler_state_dict": scheduler.state_dict()
+    }
+    
+    model_data_path = os.path.join(writer.get_logdir(), "data.pkl")
+    with open(model_data_path, "wb") as fp:
+        pickle.dump(checkpoint_data, fp)
+
+    return model, torch.Tensor(train_accuracies).mean().item(), torch.Tensor(train_losses).mean().item(), used_train_classes
+
+def train_task(task_dict, model, task_per_batch, device):
+    torch.set_grad_enabled(True)
+    context_images, target_images, context_labels, target_labels, _, _, support_n_frames ,target_n_frames = prepare_task(task_dict, device)
+    model_dict = model(context_images, context_labels, target_images, support_n_frames, target_n_frames)
+    target_logits = model_dict['logits']
+    task_loss = loss(target_logits, target_labels, device) / task_per_batch
+    task_accuracy = aggregate_accuracy(target_logits, target_labels)
+
+    task_loss.backward(retain_graph=False)
+
+    return task_loss, task_accuracy
+
+
 #setting up seeds
 def set_random_seed(manualSeed):
     print("Random Seed: ", manualSeed)
@@ -43,34 +102,52 @@ def set_random_seed(manualSeed):
     torch.cuda.manual_seed(manualSeed)
     torch.cuda.manual_seed_all(manualSeed)
 
-def evaluate_model(model_path, data_dir, num_test_tasks, args):
+def evaluate_model(model_path, data_dir, num_test_tasks, args, train = False):
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     log_path = os.path.join("HP2_eval", timestamp)
     writer = CorrectedSummaryWriter(log_path)
 
     gpu_device = 'cuda'
     device = torch.device(gpu_device if torch.cuda.is_available() else 'cpu')
+    
     model = init_model(args, device)
+    
     if args.opt == "adam":
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     elif args.opt == "sgd":
         optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
-    
-    with open(model_path, "rb") as fp:
-        checkpoint_state = raypickle.load(fp)
-        model.load_state_dict(checkpoint_state["net_state_dict"])
-        optimizer.load_state_dict(checkpoint_state["optimizer_state_dict"])
 
+    scheduler = MultiStepLR(optimizer, milestones=1000000, gamma=0.1)
+    
     video_loader = load_data(args, data_dir)
 
+    metric_dict = {}
+    
+    if not train:
+        with open(model_path, "rb") as fp:
+            checkpoint_state = raypickle.load(fp)
+            model.load_state_dict(checkpoint_state["net_state_dict"])
+            optimizer.load_state_dict(checkpoint_state["optimizer_state_dict"])
+    else: 
+        model, train_accuracy, train_loss, used_train_classes = train(model, video_loader, optimizer, scheduler, writer, args, device)
+        metric_dict.update(
+            { 
+                'train/accuracy': train_accuracy,
+                'train/loss': train_loss,
+                'train/used_classes': str(used_train_classes)
+            }
+        )
+    
     accuracy, confidence, test_loss, f1, f1_with_names, used_val_classes = test(model, video_loader, num_test_tasks, device)
 
-    metric_dict = { 
-        'test/accuracy': accuracy,
-        'test/confidence': confidence,
-        'test/loss': test_loss,
-        'test/f1_score': f1.mean()
-    }
+    metric_dict.update(
+        { 
+            'test/accuracy': accuracy,
+            'test/confidence': confidence,
+            'test/loss': test_loss,
+            'test/f1_score': f1.mean()
+        }
+    )
 
     f1_with_names = {f"f1_score/{key}": value for key, value in f1_with_names.items()}
 
@@ -184,6 +261,10 @@ def load_data(args, data_dir):
 def ray_config_to_args(data_dir, config_path):
     result = train.Result.from_path(config_path)
     config = result.config
+    metrics = result.metrics
+    training_iterations = metrics.get("it_high_val_acc", None)
+    if training_iterations is not None:
+        config["training_iterations"] = training_iterations
     args = ArgsObject(data_dir, config)
     
     return args
@@ -193,6 +274,7 @@ class ArgsObject(object):
         self.path = os.path.join(data_dir, "data", "surgicalphasev1_Xx256")
         self.traintestlist = os.path.join(data_dir, "splits", "surgicalphasev1TrainTestlist")
         self.lr = config["lr"]
+        self.args.training_iterations = config["training_iterations"]
         self.dataset = config["dataset"]
         self.split = config["split"]
         self.way = config["way"]
@@ -217,24 +299,26 @@ class ArgsObject(object):
             
         self.trans_linear_out_dim = config["trans_linear_out_dim"]
 
+HP2_Split1_model_path_list = [
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00004_4_lr=0.0001,query_per_class=2,temp_set=2_2024-06-12_00-00-41/checkpoint_000091/data.pkl",
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00005_5_lr=0.0000,query_per_class=2,temp_set=2_2024-06-12_00-00-41/checkpoint_000091/data.pkl",
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00007_7_lr=0.0001,query_per_class=3,temp_set=2_2024-06-12_00-00-41/checkpoint_000043/data.pkl",
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00011_11_lr=0.0000,query_per_class=4,temp_set=2_2024-06-12_00-00-41/checkpoint_000075/data.pkl",
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00013_13_lr=0.0001,query_per_class=5,temp_set=2_2024-06-12_00-00-41/checkpoint_000097/data.pkl",
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00028_28_lr=0.0001,query_per_class=5,temp_set=2_3_2024-06-12_00-00-41/checkpoint_000030/data.pkl",
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0e38d_00007_7_lr=0.0001,query_per_class=3,temp_set=2_2024-06-16_19-58-38/checkpoint_000015/data.pkl",
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0e38d_00017_17_lr=0.0000,query_per_class=2,temp_set=2_3_2024-06-16_19-58-38/checkpoint_000077/data.pkl",
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0e38d_00020_20_lr=0.0000,query_per_class=3,temp_set=2_3_2024-06-16_19-58-38/checkpoint_000068/data.pkl",
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0e38d_00022_22_lr=0.0001,query_per_class=4,temp_set=2_3_2024-06-16_19-58-38/checkpoint_000049/data.pkl"
+]
+
 if __name__ == "__main__":
     data_dir = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets"
     num_test_tasks = 10000
-    model_path_list = [
-        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00004_4_lr=0.0001,query_per_class=2,temp_set=2_2024-06-12_00-00-41/checkpoint_000091/data.pkl",
-        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00005_5_lr=0.0000,query_per_class=2,temp_set=2_2024-06-12_00-00-41/checkpoint_000091/data.pkl",
-        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00007_7_lr=0.0001,query_per_class=3,temp_set=2_2024-06-12_00-00-41/checkpoint_000043/data.pkl",
-        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00011_11_lr=0.0000,query_per_class=4,temp_set=2_2024-06-12_00-00-41/checkpoint_000075/data.pkl",
-        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00013_13_lr=0.0001,query_per_class=5,temp_set=2_2024-06-12_00-00-41/checkpoint_000097/data.pkl",
-        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00028_28_lr=0.0001,query_per_class=5,temp_set=2_3_2024-06-12_00-00-41/checkpoint_000030/data.pkl",
-        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0e38d_00007_7_lr=0.0001,query_per_class=3,temp_set=2_2024-06-16_19-58-38/checkpoint_000015/data.pkl",
-        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0e38d_00017_17_lr=0.0000,query_per_class=2,temp_set=2_3_2024-06-16_19-58-38/checkpoint_000077/data.pkl",
-        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0e38d_00020_20_lr=0.0000,query_per_class=3,temp_set=2_3_2024-06-16_19-58-38/checkpoint_000068/data.pkl",
-        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0e38d_00022_22_lr=0.0001,query_per_class=4,temp_set=2_3_2024-06-16_19-58-38/checkpoint_000049/data.pkl"
-    ]
 
-    for model_path in model_path_list:
+    for model_path in HP2_Split1_model_path_list:
         config_path = os.path.dirname(model_path)
         config_path = os.path.dirname(config_path)
         args = ray_config_to_args(data_dir, config_path)
-        evaluate_model(model_path, data_dir, num_test_tasks, args)
+        args.split = 7
+        evaluate_model(model_path, data_dir, num_test_tasks, args, train=True)
