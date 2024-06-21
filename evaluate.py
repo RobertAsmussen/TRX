@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 import torch
 import numpy as np
 import argparse
@@ -16,6 +17,20 @@ import random
 from ray import train, tune
 import ray.cloudpickle as raypickle
 from torcheval.metrics.functional import multiclass_f1_score
+from torch.utils.tensorboard.summary import hparams
+
+class CorrectedSummaryWriter(SummaryWriter):
+    def add_hparams(self, hparam_dict, metric_dict):
+        torch._C._log_api_usage_once("tensorboard.logging.add_hparams")
+        if type(hparam_dict) is not dict or type(metric_dict) is not dict:
+            raise TypeError('hparam_dict and metric_dict should be dictionary.')
+        exp, ssi, sei = hparams(hparam_dict, metric_dict)
+        
+        self.file_writer.add_summary(exp)
+        self.file_writer.add_summary(ssi)
+        self.file_writer.add_summary(sei)
+        for k, v in metric_dict.items():
+            self.add_scalar(k, v)
 
 seed = 2
 
@@ -29,9 +44,9 @@ def set_random_seed(manualSeed):
     torch.cuda.manual_seed_all(manualSeed)
 
 def evaluate_model(model_path, data_dir, num_test_tasks, args):
-    writer = SummaryWriter(comment="HP2_eval_")
-    temp_set_string = args.temp_set
-    args.temp_set = [int(t) for t in str.split(temp_set_string)]
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    log_path = os.path.join("HP2_eval", timestamp)
+    writer = CorrectedSummaryWriter(log_path)
 
     gpu_device = 'cuda'
     device = torch.device(gpu_device if torch.cuda.is_available() else 'cpu')
@@ -48,13 +63,24 @@ def evaluate_model(model_path, data_dir, num_test_tasks, args):
 
     video_loader = load_data(args, data_dir)
 
-    accuracy, confidence, test_loss, f1, used_val_classes = test(model, video_loader, num_test_tasks)
+    accuracy, confidence, test_loss, f1, f1_with_names, used_val_classes = test(model, video_loader, num_test_tasks, device)
+
+    metric_dict = { 
+        'test/accuracy': accuracy,
+        'test/confidence': confidence,
+        'test/loss': test_loss,
+        'test/f1_score': f1.mean()
+    }
+
+    f1_with_names = {f"f1_score/{key}": value for key, value in f1_with_names.items()}
+
+    metric_dict.update(f1_with_names)
 
     writer.add_hparams({
         'dataset': args.dataset,
         'lr': args.lr,
         'backbone': args.method,
-        'temp_set': temp_set_string,
+        'temp_set': str(args.temp_set),
         'sequenz length': args.seq_len,
         'way': args.way,
         'shot': args.shot,
@@ -68,14 +94,12 @@ def evaluate_model(model_path, data_dir, num_test_tasks, args):
         'num_workers': args.num_workers,
         'trans_linear_in_dim': args.trans_linear_in_dim,
         'trans_linear_out_dim': args.trans_linear_out_dim,
-        'num_test_tasks': num_test_tasks
+        'num_test_tasks': num_test_tasks,
         },
-        {'test/accuracy': accuracy,
-        'test/confidence': confidence,
-        'test/test_loss': test_loss,
-        'test/F1_Score': f1
-        }
+        metric_dict
     )
+
+    writer.close()
 
 def prepare_task(task_dict, device, images_to_device = True):
     context_images, context_labels = task_dict['support_set'][0], task_dict['support_labels'][0]
@@ -100,13 +124,13 @@ def test(model, video_loader, num_test_task, device):
     with torch.no_grad():
 
         video_loader.dataset.train = False
-        class_folder = video_loader.dataset.class_folder
+        class_folder = video_loader.dataset.class_folders
         test_loss = 0
         accuracies = []
         used_val_classes = set()
-        all_predictions = []
-        all_target_labels = []
-
+        f1_with_class_names = {}
+        all_f1 = [] 
+        
         for i, task_dict in enumerate(video_loader):
             if i >= num_test_task:
                 break
@@ -119,10 +143,14 @@ def test(model, video_loader, num_test_task, device):
             averaged_predictions = torch.logsumexp(target_logits, dim=0)
             prediction = torch.argmax(averaged_predictions, dim=-1)
 
-            real_label_prediction = torch.tensor([real_target_labels[i] for i in prediction])
-            all_predictions.extend(real_label_prediction)
-            all_target_labels.append(target_labels)
-
+            f1_task = multiclass_f1_score(prediction, target_labels, num_classes=args.way, average=None)
+            for it, f1 in enumerate(f1_task):
+                all_f1.append(f1)
+                class_name = (task_dict['real_target_labels_names'][it])[0]
+                if f1_with_class_names.get(class_name) is None:
+                    f1_with_class_names[class_name] = []
+                f1_with_class_names[class_name].append(f1.item())
+        
             accuracy = torch.mean(torch.eq(target_labels, prediction).float())
             accuracies.append(accuracy.item())
             test_loss += loss(target_logits, target_labels, device)
@@ -131,15 +159,15 @@ def test(model, video_loader, num_test_task, device):
 
         accuracy = np.array(accuracies).mean() * 100.0
         confidence = (196.0 * np.array(accuracies).std()) / np.sqrt(len(accuracies))
-        f1 = multiclass_f1_score(torch.tensor(all_predictions), torch.tensor(all_target_labels), len(set(all_target_labels)), average=None)
-        f1_with_class_names = {name: value for name, value in zip(class_folder, f1)}
-        print(f1_with_class_names)
+        f1_with_class_names = {key: np.array(values).mean() for key, values in f1_with_class_names.items()}
+        f1 = torch.tensor(all_f1).mean()
         video_loader.dataset.train = True
     
     test_loss = test_loss/num_test_task
     model.train()
+    print(f"{model_path} tested")
 
-    return accuracy, confidence, test_loss, f1, used_val_classes
+    return accuracy, confidence, test_loss, f1, f1_with_class_names, used_val_classes
 
 def init_model(args, device):
     model = CNN_TRX(args).to(device)
@@ -157,11 +185,14 @@ def ray_config_to_args(data_dir, config_path):
     result = train.Result.from_path(config_path)
     config = result.config
     args = ArgsObject(data_dir, config)
+    
+    return args
 
 class ArgsObject(object):
     def __init__(self, data_dir, config):
         self.path = os.path.join(data_dir, "data", "surgicalphasev1_Xx256")
         self.traintestlist = os.path.join(data_dir, "splits", "surgicalphasev1TrainTestlist")
+        self.lr = config["lr"]
         self.dataset = config["dataset"]
         self.split = config["split"]
         self.way = config["way"]
@@ -177,6 +208,7 @@ class ArgsObject(object):
         self.num_gpus = config["num_gpus"]
         self.num_workers = config["num_workers"]
         self.opt = config["Optimizer"]
+        self.tasks_per_batch = config["tasks_per_batch"] 
         
         if config["method"] == "resnet50":
             self.trans_linear_in_dim = 2048
@@ -186,10 +218,23 @@ class ArgsObject(object):
         self.trans_linear_out_dim = config["trans_linear_out_dim"]
 
 if __name__ == "__main__":
-    model_path = ""
     data_dir = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets"
-    config_path = ""
-    num_test_tasks = 100
-    args = ray_config_to_args(data_dir, config_path)
+    num_test_tasks = 10000
+    model_path_list = [
+        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00004_4_lr=0.0001,query_per_class=2,temp_set=2_2024-06-12_00-00-41/checkpoint_000091/data.pkl",
+        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00005_5_lr=0.0000,query_per_class=2,temp_set=2_2024-06-12_00-00-41/checkpoint_000091/data.pkl",
+        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00007_7_lr=0.0001,query_per_class=3,temp_set=2_2024-06-12_00-00-41/checkpoint_000043/data.pkl",
+        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00011_11_lr=0.0000,query_per_class=4,temp_set=2_2024-06-12_00-00-41/checkpoint_000075/data.pkl",
+        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00013_13_lr=0.0001,query_per_class=5,temp_set=2_2024-06-12_00-00-41/checkpoint_000097/data.pkl",
+        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00028_28_lr=0.0001,query_per_class=5,temp_set=2_3_2024-06-12_00-00-41/checkpoint_000030/data.pkl",
+        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0e38d_00007_7_lr=0.0001,query_per_class=3,temp_set=2_2024-06-16_19-58-38/checkpoint_000015/data.pkl",
+        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0e38d_00017_17_lr=0.0000,query_per_class=2,temp_set=2_3_2024-06-16_19-58-38/checkpoint_000077/data.pkl",
+        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0e38d_00020_20_lr=0.0000,query_per_class=3,temp_set=2_3_2024-06-16_19-58-38/checkpoint_000068/data.pkl",
+        "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0e38d_00022_22_lr=0.0001,query_per_class=4,temp_set=2_3_2024-06-16_19-58-38/checkpoint_000049/data.pkl"
+    ]
 
-    evaluate_model(model_path, data_dir, num_test_tasks, args)
+    for model_path in model_path_list:
+        config_path = os.path.dirname(model_path)
+        config_path = os.path.dirname(config_path)
+        args = ray_config_to_args(data_dir, config_path)
+        evaluate_model(model_path, data_dir, num_test_tasks, args)
