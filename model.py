@@ -101,14 +101,17 @@ class TemporalCrossTransformer(nn.Module):
             
             class_scores = torch.matmul(mh_queries_ks.unsqueeze(1), class_k.transpose(-2,-1)) / math.sqrt(self.args.trans_linear_out_dim)
             class_scores = class_scores.permute(1,3,0,2)
-            # Set support set videos smaller then seq_len to neginf
+
+            # set support set pairs with frame index greater than support set video length to neginf
             support_set_mask = create_support_mask(self.tuples_mask, class_n_frames, class_scores)
             class_scores = torch.where(support_set_mask.bool(), float('-inf'), class_scores)
+
             # reshape etc. to apply a softmax for each query tuple
             class_scores = class_scores.permute(2,3,0,1)
             class_scores = class_scores.reshape(n_queries, self.tuples_len, -1)
             soft_class_scores = []
 
+            # set query set pairs with frame index greater than query video length to 0 and apply Softmax to the rest
             for i_q, query in enumerate(class_scores):
                 n_frames = int(target_n_frames[i_q])
                 mask = self.tuples_mask[n_frames]
