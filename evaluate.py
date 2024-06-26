@@ -35,7 +35,7 @@ class CorrectedSummaryWriter(SummaryWriter):
 
 seed = 2
 
-def train(model, video_loader, optimizer, scheduler, writer, args, device):
+def train_model(model, video_loader, optimizer, scheduler, writer, args, device):
     model.train()
     tasks_per_batch = args.tasks_per_batch
     total_iterations = args.training_iterations
@@ -80,7 +80,7 @@ def train(model, video_loader, optimizer, scheduler, writer, args, device):
 
     return model, torch.Tensor(train_accuracies).mean().item(), torch.Tensor(train_losses).mean().item(), used_train_classes
 
-def train_task(task_dict, model, task_per_batch, device):
+def train_task(model, task_dict, task_per_batch, device):
     torch.set_grad_enabled(True)
     context_images, target_images, context_labels, target_labels, _, _, support_n_frames ,target_n_frames = prepare_task(task_dict, device)
     model_dict = model(context_images, context_labels, target_images, support_n_frames, target_n_frames)
@@ -102,7 +102,7 @@ def set_random_seed(manualSeed):
     torch.cuda.manual_seed(manualSeed)
     torch.cuda.manual_seed_all(manualSeed)
 
-def evaluate_model(model_path, data_dir, num_test_tasks, args, train = False):
+def evaluate_model(model_path, data_dir, num_test_tasks, args, train_model_before = False):
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     log_path = os.path.join("HP2_eval", timestamp)
     writer = CorrectedSummaryWriter(log_path)
@@ -117,19 +117,19 @@ def evaluate_model(model_path, data_dir, num_test_tasks, args, train = False):
     elif args.opt == "sgd":
         optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
 
-    scheduler = MultiStepLR(optimizer, milestones=1000000, gamma=0.1)
+    scheduler = MultiStepLR(optimizer, milestones=[1000000] , gamma=0.1)
     
     video_loader = load_data(args, data_dir)
 
     metric_dict = {}
     
-    if not train:
+    if not train_model_before:
         with open(model_path, "rb") as fp:
             checkpoint_state = raypickle.load(fp)
             model.load_state_dict(checkpoint_state["net_state_dict"])
             optimizer.load_state_dict(checkpoint_state["optimizer_state_dict"])
     else: 
-        model, train_accuracy, train_loss, used_train_classes = train(model, video_loader, optimizer, scheduler, writer, args, device)
+        model, train_accuracy, train_loss, used_train_classes = train_model(model, video_loader, optimizer, scheduler, writer, args, device)
         metric_dict.update(
             { 
                 'train/accuracy': train_accuracy,
@@ -274,7 +274,7 @@ class ArgsObject(object):
         self.path = os.path.join(data_dir, "data", "surgicalphasev1_Xx256")
         self.traintestlist = os.path.join(data_dir, "splits", "surgicalphasev1TrainTestlist")
         self.lr = config["lr"]
-        self.args.training_iterations = config["training_iterations"]
+        self.training_iterations = config["training_iterations"]
         self.dataset = config["dataset"]
         self.split = config["split"]
         self.way = config["way"]
@@ -315,10 +315,16 @@ HP2_Split1_model_path_list = [
 if __name__ == "__main__":
     data_dir = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets"
     num_test_tasks = 10000
+    model_path = HP2_Split1_model_path_list[6]  
+    config_path = os.path.dirname(model_path)
+    config_path = os.path.dirname(config_path)
+    args = ray_config_to_args(data_dir, config_path)
+    args.split = 7
+    evaluate_model(model_path, data_dir, num_test_tasks, args, train_model_before=True)
 
-    for model_path in HP2_Split1_model_path_list:
-        config_path = os.path.dirname(model_path)
-        config_path = os.path.dirname(config_path)
-        args = ray_config_to_args(data_dir, config_path)
-        args.split = 7
-        evaluate_model(model_path, data_dir, num_test_tasks, args, train=True)
+    #for model_path in HP2_Split1_model_path_list:
+    #    config_path = os.path.dirname(model_path)
+    #    config_path = os.path.dirname(config_path)
+    #    args = ray_config_to_args(data_dir, config_path)
+    #    args.split = 7
+    #    evaluate_model(model_path, data_dir, num_test_tasks, args, train_model_before=True)
