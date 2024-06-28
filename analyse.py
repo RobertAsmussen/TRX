@@ -66,7 +66,7 @@ def analyse_experiments(results_list):
     trials_df = trials_df.sort_values(by="val_accuracy", ascending=False)
     
     # Save the DataFrame to a CSV file
-    trials_df.to_csv("trials_summary.csv", index=False)
+    trials_df.to_csv("HP2_results.csv", index=False)
 
     
     # Print the DataFrame to verify
@@ -88,9 +88,8 @@ def copy_trials(output_dir, trials_path_list):
 
 
 if __name__ == "__main__":
-    result = train.Result.from_path("/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00004_4_lr=0.0001,query_per_class=2,temp_set=2_2024-06-12_00-00-41")
-    experiments_path = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2"
-    output_dir = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results"
+    experiments_path = "G:\\Meine Ablage\\TRX\\hyperparameter_Tuning2"
+    #output_dir = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results"
     analysis_list = []
     for path in os.listdir(experiments_path):
         experiment_path = os.path.join(experiments_path, path)

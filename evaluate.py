@@ -300,31 +300,31 @@ class ArgsObject(object):
         self.trans_linear_out_dim = config["trans_linear_out_dim"]
 
 HP2_Split1_model_path_list = [
-    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00004_4_lr=0.0001,query_per_class=2,temp_set=2_2024-06-12_00-00-41/checkpoint_000091/data.pkl",
-    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00005_5_lr=0.0000,query_per_class=2,temp_set=2_2024-06-12_00-00-41/checkpoint_000091/data.pkl",
-    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00007_7_lr=0.0001,query_per_class=3,temp_set=2_2024-06-12_00-00-41/checkpoint_000043/data.pkl",
-    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00011_11_lr=0.0000,query_per_class=4,temp_set=2_2024-06-12_00-00-41/checkpoint_000075/data.pkl",
-    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00013_13_lr=0.0001,query_per_class=5,temp_set=2_2024-06-12_00-00-41/checkpoint_000097/data.pkl",
-    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0b53e_00028_28_lr=0.0001,query_per_class=5,temp_set=2_3_2024-06-12_00-00-41/checkpoint_000030/data.pkl",
-    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0e38d_00007_7_lr=0.0001,query_per_class=3,temp_set=2_2024-06-16_19-58-38/checkpoint_000015/data.pkl",
-    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0e38d_00017_17_lr=0.0000,query_per_class=2,temp_set=2_3_2024-06-16_19-58-38/checkpoint_000077/data.pkl",
-    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0e38d_00020_20_lr=0.0000,query_per_class=3,temp_set=2_3_2024-06-16_19-58-38/checkpoint_000068/data.pkl",
-    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results/tune_with_parameters_0e38d_00022_22_lr=0.0001,query_per_class=4,temp_set=2_3_2024-06-16_19-58-38/checkpoint_000049/data.pkl"
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-25_20-54-10/tune_with_parameters_52d63_00019_19_lr=0.0001,query_per_class=3,temp_set=2_3_2024-06-25_20-54-17/checkpoint_000068/data.pkl",
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00010_10_lr=0.0001,query_per_class=4,temp_set=2_2024-06-21_11-53-29/checkpoint_000085/data.pkl",
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-25_20-54-10/tune_with_parameters_52d63_00016_16_lr=0.0001,query_per_class=2,temp_set=2_3_2024-06-25_20-54-17/checkpoint_000094/data.pkl",
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00028_28_lr=0.0001,query_per_class=5,temp_set=2_3_2024-06-21_11-53-29/checkpoint_000089/data.pkl",
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00007_7_lr=0.0001,query_per_class=3,temp_set=2_2024-06-21_11-53-29/checkpoint_000051/data.pkl",
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00004_4_lr=0.0001,query_per_class=2,temp_set=2_2024-06-21_11-53-29/checkpoint_000025/data.pkl",
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00001_1_lr=0.0001,query_per_class=1,temp_set=2_2024-06-21_11-53-29/checkpoint_000025/data.pkl",
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-25_20-54-10/tune_with_parameters_52d63_00007_7_lr=0.0001,query_per_class=3,temp_set=2_2024-06-25_20-54-17/checkpoint_000050/data.pkl",
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00019_19_lr=0.0001,query_per_class=2,temp_set=2_3_2024-06-21_11-53-29/checkpoint_000089/data.pkl",
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-25_20-54-10/tune_with_parameters_52d63_00022_22_lr=0.0001,query_per_class=4,temp_set=2_3_2024-06-25_20-54-17/checkpoint_000068/data.pkl"
 ]
 
 if __name__ == "__main__":
     data_dir = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets"
     num_test_tasks = 10000
-    model_path = HP2_Split1_model_path_list[6]  
-    config_path = os.path.dirname(model_path)
-    config_path = os.path.dirname(config_path)
-    args = ray_config_to_args(data_dir, config_path)
-    args.split = 7
-    evaluate_model(model_path, data_dir, num_test_tasks, args, train_model_before=True)
+    #model_path = HP2_Split1_model_path_list[6]  
+    #config_path = os.path.dirname(model_path)
+    #config_path = os.path.dirname(config_path)
+    #args = ray_config_to_args(data_dir, config_path)
+    #args.split = 7
+    #evaluate_model(model_path, data_dir, num_test_tasks, args, train_model_before=True)
 
-    #for model_path in HP2_Split1_model_path_list:
-    #    config_path = os.path.dirname(model_path)
-    #    config_path = os.path.dirname(config_path)
-    #    args = ray_config_to_args(data_dir, config_path)
-    #    args.split = 7
-    #    evaluate_model(model_path, data_dir, num_test_tasks, args, train_model_before=True)
+    for model_path in HP2_Split1_model_path_list:
+        config_path = os.path.dirname(model_path)
+        config_path = os.path.dirname(config_path)
+        args = ray_config_to_args(data_dir, config_path)
+        args.split = 1
+        evaluate_model(model_path, data_dir, num_test_tasks, args, train_model_before=False)
