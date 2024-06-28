@@ -1,0 +1,44 @@
+Failure # 1 (occurred at 2024-05-31_16-04-28)
+[36mray::ImplicitFunc.train()[39m (pid=1424363, ip=129.69.82.151, actor_id=c17d9196b35a2266843f0a7001000000, repr=func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/site-packages/ray/tune/trainable/trainable.py", line 331, in train
+    raise skipped from exception_cause(skipped)
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/site-packages/ray/air/_internal/util.py", line 98, in run
+    self._ret = self._target(*self._args, **self._kwargs)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/site-packages/ray/tune/trainable/function_trainable.py", line 45, in <lambda>
+    training_func=lambda: self._trainable_func(self.config),
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/site-packages/ray/tune/trainable/function_trainable.py", line 248, in _trainable_func
+    output = fn()
+             ^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/tuning.py", line 167, in train_cifar
+    task_loss, task_accuracy = train_task(task_dict, model, config["tasks_per_batch"], device)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/tuning.py", line 233, in train_task
+    model_dict = model(context_images, context_labels, target_images, support_n_frames, target_n_frames)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1532, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1541, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/model.py", line 195, in forward
+    all_logits = [t(context_features, context_labels, target_features,
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/model.py", line 195, in <listcomp>
+    all_logits = [t(context_features, context_labels, target_features,
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1532, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1541, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/model.py", line 130, in forward
+    query_prototype = torch.matmul(soft_class_scores, class_v)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 74.00 MiB. GPU

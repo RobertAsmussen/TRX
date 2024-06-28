@@ -1,0 +1,45 @@
+Failure # 1 (occurred at 2024-05-29_22-30-38)
+[36mray::ImplicitFunc.train()[39m (pid=938038, ip=129.69.82.151, actor_id=a226926f7e3dc2a18c5ac16f01000000, repr=func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/site-packages/ray/tune/trainable/trainable.py", line 331, in train
+    raise skipped from exception_cause(skipped)
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/site-packages/ray/air/_internal/util.py", line 98, in run
+    self._ret = self._target(*self._args, **self._kwargs)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/site-packages/ray/tune/trainable/function_trainable.py", line 45, in <lambda>
+    training_func=lambda: self._trainable_func(self.config),
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/site-packages/ray/tune/trainable/function_trainable.py", line 248, in _trainable_func
+    output = fn()
+             ^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/tuning.py", line 162, in train_cifar
+    for task_dict in video_loader:
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/site-packages/torch/utils/data/dataloader.py", line 631, in __next__
+    data = self._next_data()
+           ^^^^^^^^^^^^^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/site-packages/torch/utils/data/dataloader.py", line 1326, in _next_data
+    return self._process_data(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/site-packages/torch/utils/data/dataloader.py", line 1372, in _process_data
+    data.reraise()
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/site-packages/torch/_utils.py", line 705, in reraise
+    raise exception
+ValueError: Caught ValueError in DataLoader worker process 3.
+Original Traceback (most recent call last):
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/site-packages/torch/utils/data/_utils/worker.py", line 308, in _worker_loop
+    data = fetcher.fetch(index)  # type: ignore[possibly-undefined]
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/site-packages/torch/utils/data/_utils/fetch.py", line 51, in fetch
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/site-packages/torch/utils/data/_utils/fetch.py", line 51, in <listcomp>
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+            ~~~~~~~~~~~~^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_reader.py", line 367, in __getitem__
+    idxs = random.sample([i for i in range(n_total)], self.args.shot + n_queries)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/miniconda3/envs/trxenv/lib/python3.11/random.py", line 453, in sample
+    raise ValueError("Sample larger than population or is negative")
+ValueError: Sample larger than population or is negative
