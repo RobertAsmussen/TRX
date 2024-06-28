@@ -56,14 +56,14 @@ def train_model(model, video_loader, optimizer, scheduler, writer, args, device)
         train_losses.append(task_loss.detach().cpu().numpy())
 
         # optimize
-        if ((it + 1) % args.tasks_per_batch == 0) or (it == (total_iterations - 1)):
+        if (it % tasks_per_batch == 0) or (it == (total_iterations - 1)):
             optimizer.step()
             optimizer.zero_grad()
             scheduler.step()
             
             # log to tensorboard
-            writer.add_scalar('train/accuracy', torch.Tensor(train_accuracies).mean().item(), it)
-            writer.add_scalar('train/loss', torch.Tensor(train_losses).mean().item(), it)
+            writer.add_scalar('train/accuracy', torch.Tensor(train_accuracies).mean().item(), it-1)
+            writer.add_scalar('train/loss', torch.Tensor(train_losses).mean().item(), it-1)
             train_accuracies = []
             train_losses = []
 
