@@ -192,7 +192,7 @@ class VideoDataset(torch.utils.data.Dataset):
             # addition for surgery dataset
             if self.args.dataset == 'sp':
                 surgeries = list(set([i.split('_')[0] for i in class_folders]))
-                surgeries.sort
+                surgeries.sort()
 
             self.class_folders = class_folders
             self.surgeries = surgeries
