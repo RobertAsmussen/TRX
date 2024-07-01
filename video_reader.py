@@ -29,14 +29,11 @@ class Split():
         self.videos = []
         self.surgery_list = []
 
-    def add_vid(self, paths, gt_a):
+    def add_vid(self, paths, gt_a, surgery=None):
         self.videos.append(paths)
         self.gt_a_list.append(gt_a)
-
-    def add_vid(self, paths, gt_a, surgery):
-        self.videos.append(paths)
-        self.gt_a_list.append(gt_a)
-        self.surgery_list.append(surgery)
+        if surgery is not None:
+            self.surgery_list.append(surgery)
 
     def get_rand_vid(self, label, idx=-1):
         match_idxs = []
@@ -193,9 +190,9 @@ class VideoDataset(torch.utils.data.Dataset):
             if self.args.dataset == 'sp':
                 surgeries = list(set([i.split('_')[0] for i in class_folders]))
                 surgeries.sort()
+                self.surgeries = surgeries
 
             self.class_folders = class_folders
-            self.surgeries = surgeries
             for class_folder in class_folders:
                 video_folders = os.listdir(os.path.join(self.data_dir, class_folder))
                 if len(video_folders) < self.args.shot + max(self.args.query_per_class, self.args.query_per_class_test):

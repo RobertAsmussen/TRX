@@ -133,9 +133,9 @@ def createDataset(train_txt_path, val_txt_path, test_txt_path, src_path, dst_pat
     copy_folders(test_txt_path)
 
 if __name__ == "__main__":
-    src_directory = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/data/surgicalphasev1_Xx256"
-    dst_directory = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/splits/surgicalphasev1TrainTestlist"
-    train_list, val_list, test_list = createSplit_fixedSurgeries(src_directory, ["CA","GR", "HC", "LH", "HCH"], ["M2"], ["C80"])
+    src_directory = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/data/SSV2"
+    dst_directory = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/splits/somethingsomethingv2TrainTestlist"
+    train_list, val_list, test_list = createSplit_fixedSurgeries(src_directory, ["S2"], [""], ["C80"])
     CreateSplit(src_directory, dst_directory, train_list, val_list, test_list)
     #src = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/data/surgicalphasev1_Xx256"
     #dst = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets/data/surgicalphasev2_Xx256"
