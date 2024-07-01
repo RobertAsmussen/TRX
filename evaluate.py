@@ -62,8 +62,8 @@ def train_model(model, video_loader, optimizer, scheduler, writer, args, device)
             scheduler.step()
             
             # log to tensorboard
-            writer.add_scalar('train/accuracy', torch.Tensor(train_accuracies).mean().item(), it-1)
-            writer.add_scalar('train/loss', torch.Tensor(train_losses).mean().item(), it-1)
+            writer.add_scalar('train/accuracy', np.array(train_accuracies).mean(), it-1)
+            writer.add_scalar('train/loss', np.array(train_losses).mean(), it-1)
             train_accuracies = []
             train_losses = []
 
@@ -78,7 +78,7 @@ def train_model(model, video_loader, optimizer, scheduler, writer, args, device)
     with open(model_data_path, "wb") as fp:
         pickle.dump(checkpoint_data, fp)
 
-    return model, torch.Tensor(train_accuracies).mean().item(), torch.Tensor(train_losses).mean().item(), used_train_classes
+    return model
 
 def train_task(model, task_dict, task_per_batch, device):
     torch.set_grad_enabled(True)
@@ -103,6 +103,7 @@ def set_random_seed(manualSeed):
     torch.cuda.manual_seed_all(manualSeed)
 
 def evaluate_model(model_path, data_dir, num_test_tasks, args, train_model_before = False):
+    set_random_seed(seed)
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     log_path = os.path.join("HP2_eval", timestamp)
     writer = CorrectedSummaryWriter(log_path)
@@ -129,14 +130,7 @@ def evaluate_model(model_path, data_dir, num_test_tasks, args, train_model_befor
             model.load_state_dict(checkpoint_state["net_state_dict"])
             optimizer.load_state_dict(checkpoint_state["optimizer_state_dict"])
     else: 
-        model, train_accuracy, train_loss, used_train_classes = train_model(model, video_loader, optimizer, scheduler, writer, args, device)
-        metric_dict.update(
-            { 
-                'train/accuracy': train_accuracy,
-                'train/loss': train_loss,
-                'train/used_classes': str(used_train_classes)
-            }
-        )
+        model = train_model(model, video_loader, optimizer, scheduler, writer, args, device)
     
     accuracy, confidence, test_loss, f1, f1_with_names, used_val_classes = test(model, video_loader, num_test_tasks, device)
 
@@ -302,31 +296,34 @@ class ArgsObject(object):
         self.trans_linear_out_dim = config["trans_linear_out_dim"]
 
 HP2_Split1_model_path_list = [
-    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-25_20-54-10/tune_with_parameters_52d63_00019_19_lr=0.0001,query_per_class=3,temp_set=2_3_2024-06-25_20-54-17/checkpoint_000068/data.pkl",
-    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00010_10_lr=0.0001,query_per_class=4,temp_set=2_2024-06-21_11-53-29/checkpoint_000085/data.pkl",
-    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-25_20-54-10/tune_with_parameters_52d63_00016_16_lr=0.0001,query_per_class=2,temp_set=2_3_2024-06-25_20-54-17/checkpoint_000094/data.pkl",
-    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00028_28_lr=0.0001,query_per_class=5,temp_set=2_3_2024-06-21_11-53-29/checkpoint_000089/data.pkl",
-    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00007_7_lr=0.0001,query_per_class=3,temp_set=2_2024-06-21_11-53-29/checkpoint_000051/data.pkl",
-    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00004_4_lr=0.0001,query_per_class=2,temp_set=2_2024-06-21_11-53-29/checkpoint_000025/data.pkl",
-    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00001_1_lr=0.0001,query_per_class=1,temp_set=2_2024-06-21_11-53-29/checkpoint_000025/data.pkl",
+    #"/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-25_20-54-10/tune_with_parameters_52d63_00019_19_lr=0.0001,query_per_class=3,temp_set=2_3_2024-06-25_20-54-17/checkpoint_000068/data.pkl",
+    #"/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00010_10_lr=0.0001,query_per_class=4,temp_set=2_2024-06-21_11-53-29/checkpoint_000085/data.pkl",
+    #"/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-25_20-54-10/tune_with_parameters_52d63_00016_16_lr=0.0001,query_per_class=2,temp_set=2_3_2024-06-25_20-54-17/checkpoint_000094/data.pkl",
+    #"/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00028_28_lr=0.0001,query_per_class=5,temp_set=2_3_2024-06-21_11-53-29/checkpoint_000089/data.pkl",
+    #"/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00007_7_lr=0.0001,query_per_class=3,temp_set=2_2024-06-21_11-53-29/checkpoint_000051/data.pkl",
+    #"/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00004_4_lr=0.0001,query_per_class=2,temp_set=2_2024-06-21_11-53-29/checkpoint_000025/data.pkl",
+    #"/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00001_1_lr=0.0001,query_per_class=1,temp_set=2_2024-06-21_11-53-29/checkpoint_000025/data.pkl",
     "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-25_20-54-10/tune_with_parameters_52d63_00007_7_lr=0.0001,query_per_class=3,temp_set=2_2024-06-25_20-54-17/checkpoint_000050/data.pkl",
-    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00019_19_lr=0.0001,query_per_class=2,temp_set=2_3_2024-06-21_11-53-29/checkpoint_000089/data.pkl",
-    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-25_20-54-10/tune_with_parameters_52d63_00022_22_lr=0.0001,query_per_class=4,temp_set=2_3_2024-06-25_20-54-17/checkpoint_000068/data.pkl"
+    #"/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00019_19_lr=0.0001,query_per_class=2,temp_set=2_3_2024-06-21_11-53-29/checkpoint_000089/data.pkl",
+    #"/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-25_20-54-10/tune_with_parameters_52d63_00022_22_lr=0.0001,query_per_class=4,temp_set=2_3_2024-06-25_20-54-17/checkpoint_000068/data.pkl"
 ]
 
 if __name__ == "__main__":
     data_dir = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/video_datasets"
     num_test_tasks = 10000
-    #model_path = HP2_Split1_model_path_list[6]  
-    #config_path = os.path.dirname(model_path)
-    #config_path = os.path.dirname(config_path)
-    #args = ray_config_to_args(data_dir, config_path)
-    #args.split = 7
-    #evaluate_model(model_path, data_dir, num_test_tasks, args, train_model_before=True)
+    # model_path = HP2_Split1_model_path_list[6]  
+    # config_path = os.path.dirname(model_path)
+    # config_path = os.path.dirname(config_path)
+    # args = ray_config_to_args(data_dir, config_path)
+    # args.split = 2
+    # evaluate_model(model_path, data_dir, num_test_tasks, args, train_model_before=True)
 
     for model_path in HP2_Split1_model_path_list:
         config_path = os.path.dirname(model_path)
         config_path = os.path.dirname(config_path)
         args = ray_config_to_args(data_dir, config_path)
-        args.split = 1
-        evaluate_model(model_path, data_dir, num_test_tasks, args, train_model_before=False)
+        args.split = 2
+        try:
+            evaluate_model(model_path, data_dir, num_test_tasks, args, train_model_before=True)
+        except:
+            print(f"{model_path}: not able to evaluate")
