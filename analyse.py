@@ -5,6 +5,7 @@ from ray.tune.examples.mnist_pytorch import train_mnist
 from ray.tune.analysis import ExperimentAnalysis
 import pandas as pd
 import shutil
+import matplotlib.pyplot as plt
 
 def load_experiment(experiment_path):
     # Load the experiment analysis
@@ -66,7 +67,7 @@ def analyse_experiments(results_list):
     trials_df = trials_df.sort_values(by="val_accuracy", ascending=False)
     
     # Save the DataFrame to a CSV file
-    trials_df.to_csv("HP2_results.csv", index=False)
+    #trials_df.to_csv("HP2_results.csv", index=False)
 
     
     # Print the DataFrame to verify
@@ -86,9 +87,47 @@ def copy_trials(output_dir, trials_path_list):
             shutil.copytree(trial_path, output_dir_full)
             print(f"copied {trial_path}")
 
+def plot_trials_metric(trials, metric, x_name, y_name):
+    """
+    Plots the specified metric for a list of trials.
+
+    Args:
+    trials (list): List of trial dataframes, each containing the metrics over epochs.
+    metric (str): The metric to plot (e.g., "val_accuracy").
+    """
+    # Set up the plot
+    plt.figure(figsize=(15, 10))
+
+    # Iterate through the trials and plot their specified metric
+    for i, trial_result in enumerate(trials):
+        metric_df = trial_result.metrics_dataframe
+        # Check if the trial data contains the metric
+        if metric not in metric_df:
+            print(f"Metric '{metric}' not found in trial {i+1}. Skipping this trial.")
+            continue
+        
+        metric_list = metric_df[metric].to_list()
+        # metric_list = [i*100 for i in metric_list]
+        epoch_list = metric_df["training_iteration"].to_list()
+        epoch_list = [i*100 for i in epoch_list]
+        # Plot the specified metric
+        plt.plot(epoch_list, metric_list, label=f"Kombination {i+1}")
+
+    # Customize the plot
+    plt.xlabel(x_name, fontsize = 32)
+    plt.ylabel(y_name, fontsize = 32)
+    plt.legend(loc='lower right', fontsize = 20, ncol = 2)
+    # Calculate x-axis tick positions
+    x_ticks = range(0, 10001, 1000)  # Adjust as needed based on your epochs range
+    
+    plt.xticks(x_ticks, fontsize = 20)
+    plt.yticks(fontsize = 20)
+    plt.grid(True)
+    plt.show()
+
 
 if __name__ == "__main__":
-    experiments_path = "G:\\Meine Ablage\\TRX\\hyperparameter_Tuning2"
+    experiments_path = "G:\\Meine Ablage\\Studium\\Master\\Forschungsarbeit\\05_Data\\TRX\\hyperparameter_Tuning2"
     #output_dir = "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/HP2_best_results"
     analysis_list = []
     for path in os.listdir(experiments_path):
@@ -100,6 +139,8 @@ if __name__ == "__main__":
     trials_df = analyse_experiments(analysis_list)
     # Assuming trials_df is your DataFrame
     first_10_trials = trials_df['trial_path'].iloc[:10].to_list()
+    trial_result_list = [train.Result.from_path(path) for path in first_10_trials]
+    plot_trials_metric(trial_result_list, "val_accuracy", "Epoche", "$acc_{val}$ in %")
 
     # Call the function with the first 10 entries
    # copy_trials(output_dir, first_10_trials)
