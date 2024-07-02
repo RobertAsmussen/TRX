@@ -267,8 +267,8 @@ def ray_config_to_args(data_dir, config_path):
 
 class ArgsObject(object):
     def __init__(self, data_dir, config):
-        self.path = os.path.join(data_dir, "data", "SSV2")
-        self.traintestlist = os.path.join(data_dir, "splits", "somethingsomethingv2TrainTestlist")
+        self.path = os.path.join(data_dir, "data", "surgicalphasev1_Xx256")
+        self.traintestlist = os.path.join(data_dir, "splits", "surgicalphasev1TrainTestlist")
         self.lr = config["lr"]
         self.training_iterations = config["training_iterations"]
         self.dataset = config["dataset"]
@@ -304,7 +304,7 @@ HP2_Split1_model_path_list = [
     #"/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00004_4_lr=0.0001,query_per_class=2,temp_set=2_2024-06-21_11-53-29/checkpoint_000025/data.pkl",
     #"/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00001_1_lr=0.0001,query_per_class=1,temp_set=2_2024-06-21_11-53-29/checkpoint_000025/data.pkl",
     #"/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-25_20-54-10/tune_with_parameters_52d63_00007_7_lr=0.0001,query_per_class=3,temp_set=2_2024-06-25_20-54-17/checkpoint_000050/data.pkl",
-    #"/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00019_19_lr=0.0001,query_per_class=2,temp_set=2_3_2024-06-21_11-53-29/checkpoint_000089/data.pkl",
+    "/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-21_11-53-17/tune_with_parameters_1c9a1_00019_19_lr=0.0001,query_per_class=2,temp_set=2_3_2024-06-21_11-53-29/checkpoint_000089/data.pkl",
     #"/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2/tune_with_parameters_2024-06-25_20-54-10/tune_with_parameters_52d63_00022_22_lr=0.0001,query_per_class=4,temp_set=2_3_2024-06-25_20-54-17/checkpoint_000068/data.pkl"
 ]
 
@@ -341,16 +341,16 @@ if __name__ == "__main__":
     # args.split = 2
     # evaluate_model(model_path, data_dir, num_test_tasks, args, train_model_before=True)
 
-    #for model_path in HP2_Split1_model_path_list:
-    #    config_path = os.path.dirname(model_path)
-    #    config_path = os.path.dirname(config_path)
-    #    args = ray_config_to_args(data_dir, config_path)
-    #    args.split = 2
-    #    try:
-    #        evaluate_model(model_path, data_dir, num_test_tasks, args, train_model_before=True)
-    #    except:
-    #        print(f"{model_path}: not able to evaluate")
+    for model_path in HP2_Split1_model_path_list:
+        config_path = os.path.dirname(model_path)
+        config_path = os.path.dirname(config_path)
+        args = ray_config_to_args(data_dir, config_path)
+        args.split = 2
+        try:
+            evaluate_model(model_path, data_dir, num_test_tasks, args, train_model_before=True)
+        except:
+            print(f"{model_path}: not able to evaluate")
 
-    args = ArgsObject(data_dir, ssv2_config)
-    evaluate_model(None, data_dir, num_test_tasks, args, train_model_before=True)
+   # args = ArgsObject(data_dir, ssv2_config)
+   # evaluate_model(None, data_dir, num_test_tasks, args, train_model_before=True)
     
