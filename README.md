@@ -62,7 +62,7 @@ We based our code on [CNAPs](https://github.com/cambridge-mlg/cnaps) (logging, t
 
 # (adapted) Temporal-Relational Cross-Transformers (TRX)
 
-## environment
+## environment (Linux)
 For all packages load conda environment from _trxenv.yaml_.
 
 ## "--dataset" "SP"
