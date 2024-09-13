@@ -88,3 +88,6 @@ evaluate_model(model_path, data_dir, num_test_tasks, args, train_model_before=Tr
 ## Results
 Evaluation results and models with surgical data are saved in _eval_ folder.
 Hyperparameter Tuning results are saved in _hyperparameter_Tuning*_.
+
+## visualize.py
+Example script to generate graphs from generated training/test results.
