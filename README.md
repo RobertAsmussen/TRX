@@ -1,5 +1,6 @@
-# Temporal-Relational Cross-Transformers (TRX)
+This repo contains the implementation of the TRX Model from Perrett et al. adapted to surgical data. First is the general documentation of the TRX-Modell followed by the [adaptions](#adapted-temporal-relational-cross-transformers-trx) made.
 
+# (original) Temporal-Relational Cross-Transformers (TRX)
 
 This repo contains code for the method introduced in the paper:
 
@@ -58,3 +59,32 @@ If you use this code/method or find it helpful, please cite:
 ## Acknowledgements
 
 We based our code on [CNAPs](https://github.com/cambridge-mlg/cnaps) (logging, training, evaluation etc.). We use [torch_videovision](https://github.com/hassony2/torch_videovision) for video transforms. We took inspiration from the image-based [CrossTransformer](https://proceedings.neurips.cc/paper/2020/file/fa28c6cdf8dd6f41a657c3d7caa5c709-Paper.pdf) and the [Temporal-Relational Network](https://openaccess.thecvf.com/content_ECCV_2018/papers/Bolei_Zhou_Temporal_Relational_Reasoning_ECCV_2018_paper.pdf).
+
+# (adapted) Temporal-Relational Cross-Transformers (TRX)
+
+## environment
+For all packages load conda environment from _trxenv.yaml_.
+
+## "--dataset" "SP"
+Using this command the classfolders (phases) need have the prefix of the surgery followed by '\_' _e.g. 'surgery'\_'phase'_ . Do not zip the data folder it is not supported. In general non zip data folders is now supported in the TRX-model.
+
+## createSplit
+CreateSplit.py is a script to create Splits for surgical data.
+
+## Hyperparameter Tuning with Raytune
+For Hyperparameter Tuning use tuning.py script. Create a ray tune config with the search range and run the script.
+
+## Evaluation Script
+User evaluate.py to evaluate (and train) a model. Create a config and run 
+
+evaluate_model(model_path, data_dir, num_test_tasks, args, train_model_before=True)
+
+- model_path: path of the trained model (*.pkl). If train_model_before=True, path where the trained model should be stored (path without *.pkl).
+- data_dir: directory where the data is stored
+- num_test_tasks: number of tasks to test on
+- args: hyperparameter used
+- train_model_before (bool): indicates wether the model is already trained
+
+## Results
+Evaluation results and models with surgical data are saved in _eval_ folder.
+Hyperparameter Tuning results are saved in _hyperparameter_Tuning*_.

@@ -34,6 +34,7 @@ def set_random_seed(manualSeed):
     torch.cuda.manual_seed(manualSeed)
     torch.cuda.manual_seed_all(manualSeed)
 
+# max seq_len possible for hyperparameter config as a result form HP1
 def choose_seq_len(method, temp_set, query_per_class):
     data = [
         {"method": "resnet18", "temp_set": [2, 3], "query_per_class": 1, "seq_len": 14},
@@ -138,6 +139,7 @@ def main(max_iterations=20000, data_dir="/media/robert/Volume/Forschungsarbeit_R
         grace_period=1000,
         reduction_factor=4
     )
+
     tuner = tune.Tuner(
         tune.with_resources(
             tune.with_parameters(partial(train_cifar, data_dir=data_dir)),
@@ -147,26 +149,19 @@ def main(max_iterations=20000, data_dir="/media/robert/Volume/Forschungsarbeit_R
             scheduler=scheduler,
             num_samples=1
         ),
+
+        # TODO: chose your storage path
         run_config=train.RunConfig(
             storage_path="/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2",
             checkpoint_config=train.CheckpointConfig(num_to_keep=5,checkpoint_score_attribute="val_accuracy"),
         ),
+
+        # TODO: chose your config
         param_space=config_HP2_R34
     )
     results = tuner.fit()
 
     return
-
-    result = tune.run(
-        partial(train_cifar, data_dir=data_dir),
-        config=config_HP2_R34_fail,
-        num_samples=1,
-        scheduler=scheduler,
-        resources_per_trial={"cpu": 24, "gpu": 1},
-        storage_path="/media/robert/Volume/Forschungsarbeit_Robert_Asmussen/05_Data/TRX/hyperparameter_Tuning2",
-        keep_checkpoints_num=5,
-        checkpoint_score_attr="val_accuracy"
-    )
 
 def preprocess_config(config):
     temp_set = str.split(config["temp_set"], ",")
@@ -388,5 +383,4 @@ class ArgsObject(object):
         self.num_workers = config["num_workers"]
 
 if __name__ == "__main__":
-    # You can change the number of GPUs per trial here:
     main()
